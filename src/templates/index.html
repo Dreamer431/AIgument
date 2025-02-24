@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIgument</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-8">AIgument</h1>
+        
+        <div class="max-w-2xl mx-auto">
+            <div class="mb-6">
+                <input type="text" id="topic" 
+                       class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:border-blue-500"
+                       placeholder="请输入辩论主题">
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2">辩论轮数</label>
+                <select id="rounds" class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:border-blue-500">
+                    <option value="1">1轮</option>
+                    <option value="2">2轮</option>
+                    <option value="3" selected>3轮</option>
+                    <option value="4">4轮</option>
+                    <option value="5">5轮</option>
+                </select>
+            </div>
+            
+            <button onclick="startDebate()" 
+                    class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors mb-6">
+                开始辩论
+            </button>
+
+            <div id="loading" class="hidden text-center mb-6">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                <p class="mt-2">正在生成辩论内容...</p>
+            </div>
+
+            <div id="results" class="space-y-6 hidden">
+                <div id="debate-history" class="space-y-4"></div>
+            </div>
+
+            <div id="error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"></div>
+        </div>
+    </div>
+
+    <script>
+        async function startDebate() {
+            const topic = document.getElementById('topic').value.trim();
+            const rounds = parseInt(document.getElementById('rounds').value);
+            
+            if (!topic) {
+                showError('请输入辩论主题');
+                return;
+            }
+
+            // 显示加载状态
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/debate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ topic, rounds })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // 显示辩论历史
+                    const historyContainer = document.getElementById('debate-history');
+                    historyContainer.innerHTML = ''; // 清空之前的内容
+                    
+                    // 显示主题
+                    const topicElement = document.createElement('div');
+                    topicElement.className = 'bg-blue-100 p-4 rounded-lg mb-4';
+                    topicElement.innerHTML = `<h2 class="text-xl font-bold">辩论主题：${data.topic}</h2>`;
+                    historyContainer.appendChild(topicElement);
+
+                    // 按轮次分组显示辩论内容
+                    let currentRound = 0;
+                    let roundContainer = null;
+                    
+                    data.debate_history.forEach(entry => {
+                        if (entry.round !== currentRound) {
+                            currentRound = entry.round;
+                            roundContainer = document.createElement('div');
+                            roundContainer.className = 'mb-6';
+                            roundContainer.innerHTML = `<h3 class="text-lg font-semibold mb-3">第 ${currentRound} 轮</h3>`;
+                            historyContainer.appendChild(roundContainer);
+                        }
+
+                        const viewElement = document.createElement('div');
+                        viewElement.className = `bg-white p-6 rounded-lg shadow mb-4`;
+                        viewElement.innerHTML = `
+                            <h4 class="text-lg font-semibold mb-2 ${entry.side === '正方' ? 'text-green-600' : 'text-red-600'}">${entry.side}观点</h4>
+                            <p class="text-gray-700">${entry.content}</p>
+                        `;
+                        roundContainer.appendChild(viewElement);
+                    });
+
+                    document.getElementById('results').classList.remove('hidden');
+                } else {
+                    showError(data.error || '生成辩论内容时出错');
+                }
+            } catch (error) {
+                showError('请求失败，请稍后重试');
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html> 
