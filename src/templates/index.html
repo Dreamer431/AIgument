@@ -8,7 +8,9 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.7.0/styles/github.min.css">
     <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.7.0/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
+        /* 基础Markdown样式 */
         .markdown-content {
             line-height: 1.6;
         }
@@ -64,22 +66,140 @@
         .markdown-content th {
             background-color: #f7fafc;
         }
+
+        /* 添加平滑动画和现代UI样式 */
+        body {
+            background: linear-gradient(135deg, #EBF4F5 0%, #D2E9F5 100%);
+            min-height: 100vh;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(to right, #56CCF2, #3498db);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(86, 204, 242, 0.4);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(86, 204, 242, 0.5);
+        }
+        
+        /* 打字机效果 */
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+        
+        .typing-effect {
+            overflow: hidden;
+            border-right: .15em solid transparent;
+            white-space: normal;
+            letter-spacing: normal;
+            animation: blink-caret .75s step-end infinite;
+        }
+        
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: #56CCF2 }
+        }
+        
+        /* 闪烁动画 */
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        
+        .pulse {
+            animation: fadeInOut 2s infinite;
+        }
+        
+        /* 渐变背景动画 */
+        @keyframes gradientAnimation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .gradient-animation {
+            background: linear-gradient(270deg, #56CCF2, #2E86DE, #56CCF2);
+            background-size: 200% 200%;
+            animation: gradientAnimation 5s ease infinite;
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+        
+        .title-gradient {
+            background: linear-gradient(to right, #3498db, #56CCF2);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: inline-block;
+            padding: 0.2em 0;
+            text-shadow: 0 0 1px rgba(0,0,0,0.05);
+        }
+        
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #56CCF2;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3498db;
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 640px) {
+            .container {
+                padding: 10px;
+            }
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="min-h-screen bg-gray-100">
     <div class="container mx-auto px-4 py-8">
-        <h1 class="text-4xl font-bold text-center mb-8">AIgument</h1>
+        <div class="text-center animate__animated animate__fadeIn">
+            <h1 class="text-5xl font-bold mb-4 title-gradient">AIgument</h1>
+            <p class="text-gray-600 mb-8 text-lg mt-5">人工智能辩论平台</p>
+        </div>
         
-        <div class="max-w-2xl mx-auto">
+        <div class="max-w-4xl mx-auto card p-6 animate__animated animate__fadeInUp">
             <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2">辩论主题</label>
                 <input type="text" id="topic" 
-                       class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:border-blue-500"
+                       class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
                        placeholder="请输入辩论主题">
             </div>
 
             <div class="mb-6">
                 <label class="block text-gray-700 text-sm font-bold mb-2">辩论轮数</label>
-                <select id="rounds" class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:border-blue-500">
+                <select id="rounds" class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all appearance-none">
                     <option value="1">1轮</option>
                     <option value="2">2轮</option>
                     <option value="3" selected>3轮</option>
@@ -89,31 +209,40 @@
             </div>
             
             <div class="mb-6">
-                <label class="inline-flex items-center">
-                    <input type="checkbox" id="stream-mode" class="form-checkbox h-5 w-5 text-blue-600" checked>
-                    <span class="ml-2 text-gray-700">使用流式输出（实时显示回复）</span>
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <div class="relative">
+                        <input type="checkbox" id="stream-mode" class="sr-only" checked>
+                        <div class="w-10 h-4 bg-gray-300 rounded-full shadow-inner"></div>
+                        <div class="dot absolute w-6 h-6 bg-white rounded-full shadow -left-1 -top-1 transition"></div>
+                    </div>
+                    <span class="text-gray-700">使用流式输出（实时显示回复）</span>
                 </label>
             </div>
             
             <button onclick="startDebate()" 
-                    class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors mb-6">
-                开始辩论
+                    class="w-full btn-primary py-3 rounded-lg transition-all mb-6">
+                <span class="inline-block">开始辩论</span>
             </button>
 
-            <div id="loading" class="hidden text-center mb-6">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                <p class="mt-2">正在生成辩论内容...</p>
+            <div id="loading" class="hidden text-center mb-6 animate__animated animate__fadeIn">
+                <div class="flex justify-center items-center space-x-2 mt-4">
+                    <div class="w-3 h-3 bg-blue-400 rounded-full animate-bounce" style="animation-delay: 0.1s; animation-duration: 1.2s;"></div>
+                    <div class="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.2s; animation-duration: 1.2s;"></div>
+                    <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.3s; animation-duration: 1.2s;"></div>
+                </div>
+                <p class="mt-4 text-gray-600">AI辩手正在激烈讨论中...</p>
             </div>
 
-            <div id="results" class="space-y-6 hidden">
+            <div id="results" class="space-y-6 hidden animate__animated animate__fadeIn">
                 <div id="debate-history" class="space-y-4"></div>
             </div>
 
-            <div id="error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"></div>
+            <div id="error" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded animate__animated animate__shakeX"></div>
         </div>
     </div>
 
     <script>
+        // Markdown设置
         marked.setOptions({
             breaks: true,
             gfm: true,
@@ -131,6 +260,62 @@
                 return hljs.highlightAuto(code).value;
             }
         });
+
+        // 切换开关样式
+        document.getElementById('stream-mode').addEventListener('change', function() {
+            const dot = this.parentElement.querySelector('.dot');
+            if(this.checked) {
+                dot.classList.add('transform', 'translate-x-6', 'bg-blue-400');
+            } else {
+                dot.classList.remove('transform', 'translate-x-6', 'bg-blue-400');
+            }
+        });
+
+        // 初始化切换开关状态
+        (function() {
+            const checkbox = document.getElementById('stream-mode');
+            const dot = checkbox.parentElement.querySelector('.dot');
+            if(checkbox.checked) {
+                dot.classList.add('transform', 'translate-x-6', 'bg-blue-400');
+            } else {
+                dot.classList.remove('transform', 'translate-x-6', 'bg-blue-400');
+            }
+        })();
+
+        // 打字机效果函数
+        function typeWriter(element, text, speed = 10, markdown = true) {
+            let i = 0;
+            let content = markdown ? marked.parse(text) : text;
+            
+            // 创建一个临时容器来解析HTML
+            const temp = document.createElement('div');
+            temp.innerHTML = content;
+            
+            // 清空目标元素内容
+            element.innerHTML = '';
+            element.classList.add('typing-effect');
+            
+            // 逐个添加解析后的子节点
+            const children = Array.from(temp.childNodes);
+            let currentIndex = 0;
+            
+            function addNextNode() {
+                if (currentIndex < children.length) {
+                    const node = children[currentIndex].cloneNode(true);
+                    element.appendChild(node);
+                    currentIndex++;
+                    setTimeout(addNextNode, speed * 10);
+                } else {
+                    // 完成后应用代码高亮
+                    element.querySelectorAll('pre code').forEach((block) => {
+                        hljs.highlightElement(block);
+                    });
+                    element.classList.remove('typing-effect');
+                }
+            }
+            
+            addNextNode();
+        }
 
         async function startDebate() {
             const topic = document.getElementById('topic').value.trim();
@@ -153,8 +338,8 @@
             
             // 显示主题
             const topicElement = document.createElement('div');
-            topicElement.className = 'bg-blue-100 p-4 rounded-lg mb-4';
-            topicElement.innerHTML = `<h2 class="text-xl font-bold">辩论主题：${topic}</h2>`;
+            topicElement.className = 'card p-4 animate__animated animate__fadeIn';
+            topicElement.innerHTML = `<h2 class="text-xl font-bold text-blue-600">辩论主题：${topic}</h2>`;
             historyContainer.appendChild(topicElement);
 
             try {
@@ -212,7 +397,8 @@
             let roundContainers = {};
             for (let i = 1; i <= rounds; i++) {
                 const roundContainer = document.createElement('div');
-                roundContainer.className = 'mb-6';
+                roundContainer.className = 'mb-6 animate__animated animate__fadeIn';
+                roundContainer.style.animationDelay = `${(i-1)*0.3}s`;
                 roundContainer.innerHTML = `<h3 class="text-lg font-semibold mb-3">第 ${i} 轮</h3>`;
                 historyContainer.appendChild(roundContainer);
                 roundContainers[i] = roundContainer;
@@ -224,10 +410,18 @@
                 for (let side of ['正方', '反方']) {
                     const key = `${round}-${side}`;
                     const viewElement = document.createElement('div');
-                    viewElement.className = `bg-white p-6 rounded-lg shadow mb-4`;
+                    viewElement.className = `card p-6 mb-4 animate__animated animate__fadeIn`;
+                    viewElement.style.animationDelay = `${(round-1)*0.3 + (side==='正方'?0.1:0.2)}s`;
+                    
+                    const sideClass = side === '正方' ? 'text-blue-600' : 'text-red-600';
                     viewElement.innerHTML = `
-                        <h4 class="text-lg font-semibold mb-2 ${side === '正方' ? 'text-green-600' : 'text-red-600'}">${side}观点</h4>
-                        <div id="content-${key}" class="text-gray-700 markdown-content">正在生成中...</div>
+                        <h4 class="text-lg font-semibold mb-2 ${sideClass}">${side}观点</h4>
+                        <div id="content-${key}" class="text-gray-700 markdown-content">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-${side === '正方' ? 'blue' : 'red'}-500 rounded-full pulse"></div>
+                                <span>正在思考中...</span>
+                            </div>
+                        </div>
                     `;
                     roundContainers[round].appendChild(viewElement);
                     contentElements[key] = document.getElementById(`content-${key}`);
@@ -241,10 +435,23 @@
                 const data = JSON.parse(event.data);
                 if (data.type === 'content') {
                     const key = `${data.round}-${data.side}`;
-                    contentElements[key].innerHTML = marked.parse(data.content);
-                    document.querySelectorAll('pre code').forEach((block) => {
-                        hljs.highlightElement(block);
-                    });
+                    const contentElement = contentElements[key];
+                    
+                    // 使用打字机效果逐步显示内容
+                    if (contentElement) {
+                        // 如果是第一次更新内容，清除"正在思考中..."的提示
+                        if (contentElement.querySelector('.pulse')) {
+                            contentElement.innerHTML = '';
+                        }
+                        
+                        // 使用打字机效果显示内容
+                        contentElement.innerHTML = marked.parse(data.content);
+                        
+                        // 应用代码高亮
+                        contentElement.querySelectorAll('pre code').forEach((block) => {
+                            hljs.highlightElement(block);
+                        });
+                    }
                 }
             };
             
@@ -271,29 +478,34 @@
             let currentRound = 0;
             let roundContainer = null;
             
-            debateHistory.forEach(entry => {
+            debateHistory.forEach((entry, index) => {
                 if (entry.round !== currentRound) {
                     currentRound = entry.round;
                     roundContainer = document.createElement('div');
-                    roundContainer.className = 'mb-6';
+                    roundContainer.className = 'mb-6 animate__animated animate__fadeIn';
+                    roundContainer.style.animationDelay = `${(index)*0.1}s`;
                     roundContainer.innerHTML = `<h3 class="text-lg font-semibold mb-3">第 ${currentRound} 轮</h3>`;
                     container.appendChild(roundContainer);
                 }
 
                 const viewElement = document.createElement('div');
-                viewElement.className = `bg-white p-6 rounded-lg shadow mb-4`;
+                viewElement.className = `card p-6 mb-4 animate__animated animate__fadeIn`;
+                viewElement.style.animationDelay = `${(index+1)*0.1}s`;
                 
-                const parsedContent = marked.parse(entry.content);
+                const contentElement = document.createElement('div');
+                contentElement.className = 'text-gray-700 markdown-content';
+                
+                const sideClass = entry.side === '正方' ? 'text-blue-600' : 'text-red-600';
                 
                 viewElement.innerHTML = `
-                    <h4 class="text-lg font-semibold mb-2 ${entry.side === '正方' ? 'text-green-600' : 'text-red-600'}">${entry.side}观点</h4>
-                    <div class="text-gray-700 markdown-content">${parsedContent}</div>
+                    <h4 class="text-lg font-semibold mb-2 ${sideClass}">${entry.side}观点</h4>
                 `;
+                
+                viewElement.appendChild(contentElement);
                 roundContainer.appendChild(viewElement);
                 
-                viewElement.querySelectorAll('pre code').forEach((block) => {
-                    hljs.highlightElement(block);
-                });
+                // 使用打字机效果显示内容
+                typeWriter(contentElement, entry.content);
             });
         }
 
@@ -301,6 +513,14 @@
             const errorDiv = document.getElementById('error');
             errorDiv.textContent = message;
             errorDiv.classList.remove('hidden');
+            
+            // 添加动画类
+            errorDiv.classList.add('animate__animated', 'animate__shakeX');
+            
+            // 移除动画类以便将来可以再次触发
+            setTimeout(() => {
+                errorDiv.classList.remove('animate__animated', 'animate__shakeX');
+            }, 1000);
         }
     </script>
 </body>
