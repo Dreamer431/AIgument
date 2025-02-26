@@ -5,6 +5,66 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AIgument</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.7.0/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.7.0/highlight.min.js"></script>
+    <style>
+        .markdown-content {
+            line-height: 1.6;
+        }
+        .markdown-content h1, .markdown-content h2, .markdown-content h3,
+        .markdown-content h4, .markdown-content h5, .markdown-content h6 {
+            margin-top: 1.2em;
+            margin-bottom: 0.8em;
+            font-weight: 600;
+        }
+        .markdown-content h1 { font-size: 1.8em; }
+        .markdown-content h2 { font-size: 1.5em; }
+        .markdown-content h3 { font-size: 1.3em; }
+        .markdown-content h4 { font-size: 1.1em; }
+        .markdown-content p { margin-bottom: 1em; }
+        .markdown-content ul, .markdown-content ol {
+            margin-bottom: 1em;
+            padding-left: 1.5em;
+        }
+        .markdown-content ul { list-style-type: disc; }
+        .markdown-content ol { list-style-type: decimal; }
+        .markdown-content blockquote {
+            border-left: 3px solid #cbd5e0;
+            padding-left: 1em;
+            margin-bottom: 1em;
+            color: #4a5568;
+        }
+        .markdown-content code {
+            background-color: #f7fafc;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .markdown-content pre {
+            background-color: #f7fafc;
+            padding: 1em;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin-bottom: 1em;
+        }
+        .markdown-content pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+        .markdown-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 1em;
+        }
+        .markdown-content th, .markdown-content td {
+            border: 1px solid #e2e8f0;
+            padding: 0.5em;
+        }
+        .markdown-content th {
+            background-color: #f7fafc;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
@@ -28,6 +88,13 @@
                 </select>
             </div>
             
+            <div class="mb-6">
+                <label class="inline-flex items-center">
+                    <input type="checkbox" id="stream-mode" class="form-checkbox h-5 w-5 text-blue-600" checked>
+                    <span class="ml-2 text-gray-700">使用流式输出（实时显示回复）</span>
+                </label>
+            </div>
+            
             <button onclick="startDebate()" 
                     class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors mb-6">
                 开始辩论
@@ -47,73 +114,187 @@
     </div>
 
     <script>
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            headerIds: true,
+            mangle: false,
+            sanitize: false,
+            smartLists: true,
+            smartypants: true,
+            highlight: function(code, lang) {
+                if (lang && hljs.getLanguage(lang)) {
+                    try {
+                        return hljs.highlight(code, { language: lang }).value;
+                    } catch (e) {}
+                }
+                return hljs.highlightAuto(code).value;
+            }
+        });
+
         async function startDebate() {
             const topic = document.getElementById('topic').value.trim();
             const rounds = parseInt(document.getElementById('rounds').value);
+            const streamMode = document.getElementById('stream-mode').checked;
             
             if (!topic) {
                 showError('请输入辩论主题');
                 return;
             }
 
-            // 显示加载状态
+            // 显示加载状态和结果容器
             document.getElementById('loading').classList.remove('hidden');
-            document.getElementById('results').classList.add('hidden');
             document.getElementById('error').classList.add('hidden');
+            document.getElementById('results').classList.remove('hidden');
+
+            // 清空之前的辩论内容
+            const historyContainer = document.getElementById('debate-history');
+            historyContainer.innerHTML = '';
+            
+            // 显示主题
+            const topicElement = document.createElement('div');
+            topicElement.className = 'bg-blue-100 p-4 rounded-lg mb-4';
+            topicElement.innerHTML = `<h2 class="text-xl font-bold">辩论主题：${topic}</h2>`;
+            historyContainer.appendChild(topicElement);
 
             try {
-                const response = await fetch('/api/debate', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ topic, rounds })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    // 显示辩论历史
-                    const historyContainer = document.getElementById('debate-history');
-                    historyContainer.innerHTML = ''; // 清空之前的内容
-                    
-                    // 显示主题
-                    const topicElement = document.createElement('div');
-                    topicElement.className = 'bg-blue-100 p-4 rounded-lg mb-4';
-                    topicElement.innerHTML = `<h2 class="text-xl font-bold">辩论主题：${data.topic}</h2>`;
-                    historyContainer.appendChild(topicElement);
-
-                    // 按轮次分组显示辩论内容
-                    let currentRound = 0;
-                    let roundContainer = null;
-                    
-                    data.debate_history.forEach(entry => {
-                        if (entry.round !== currentRound) {
-                            currentRound = entry.round;
-                            roundContainer = document.createElement('div');
-                            roundContainer.className = 'mb-6';
-                            roundContainer.innerHTML = `<h3 class="text-lg font-semibold mb-3">第 ${currentRound} 轮</h3>`;
-                            historyContainer.appendChild(roundContainer);
-                        }
-
-                        const viewElement = document.createElement('div');
-                        viewElement.className = `bg-white p-6 rounded-lg shadow mb-4`;
-                        viewElement.innerHTML = `
-                            <h4 class="text-lg font-semibold mb-2 ${entry.side === '正方' ? 'text-green-600' : 'text-red-600'}">${entry.side}观点</h4>
-                            <p class="text-gray-700">${entry.content}</p>
-                        `;
-                        roundContainer.appendChild(viewElement);
-                    });
-
-                    document.getElementById('results').classList.remove('hidden');
+                if (streamMode) {
+                    // 使用流式模式
+                    await streamDebate(topic, rounds, historyContainer);
                 } else {
-                    showError(data.error || '生成辩论内容时出错');
+                    // 使用传统非流式模式
+                    await regularDebate(topic, rounds, historyContainer);
                 }
             } catch (error) {
+                console.error('辩论过程出错:', error);
                 showError('请求失败，请稍后重试');
             } finally {
                 document.getElementById('loading').classList.add('hidden');
             }
+        }
+
+        // 传统非流式辩论模式
+        async function regularDebate(topic, rounds, historyContainer) {
+            const response = await fetch('/api/debate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ topic, rounds, stream: false })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                renderDebateHistory(data.debate_history, historyContainer);
+            } else {
+                showError(data.error || '生成辩论内容时出错');
+            }
+        }
+
+        // 流式辩论模式
+        async function streamDebate(topic, rounds, historyContainer) {
+            // 初始化辩论
+            const initResponse = await fetch('/api/debate/init', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ topic, rounds })
+            });
+
+            if (!initResponse.ok) {
+                const error = await initResponse.json();
+                throw new Error(error.message || '初始化辩论失败');
+            }
+            
+            // 创建轮次容器
+            let roundContainers = {};
+            for (let i = 1; i <= rounds; i++) {
+                const roundContainer = document.createElement('div');
+                roundContainer.className = 'mb-6';
+                roundContainer.innerHTML = `<h3 class="text-lg font-semibold mb-3">第 ${i} 轮</h3>`;
+                historyContainer.appendChild(roundContainer);
+                roundContainers[i] = roundContainer;
+            }
+            
+            // 为每轮每个辩论方创建内容容器
+            let contentElements = {};
+            for (let round = 1; round <= rounds; round++) {
+                for (let side of ['正方', '反方']) {
+                    const key = `${round}-${side}`;
+                    const viewElement = document.createElement('div');
+                    viewElement.className = `bg-white p-6 rounded-lg shadow mb-4`;
+                    viewElement.innerHTML = `
+                        <h4 class="text-lg font-semibold mb-2 ${side === '正方' ? 'text-green-600' : 'text-red-600'}">${side}观点</h4>
+                        <div id="content-${key}" class="text-gray-700 markdown-content">正在生成中...</div>
+                    `;
+                    roundContainers[round].appendChild(viewElement);
+                    contentElements[key] = document.getElementById(`content-${key}`);
+                }
+            }
+            
+            // 开始流式接收辩论内容
+            const eventSource = new EventSource(`/api/debate/stream?topic=${encodeURIComponent(topic)}&rounds=${rounds}`);
+            
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'content') {
+                    const key = `${data.round}-${data.side}`;
+                    contentElements[key].innerHTML = marked.parse(data.content);
+                    document.querySelectorAll('pre code').forEach((block) => {
+                        hljs.highlightElement(block);
+                    });
+                }
+            };
+            
+            eventSource.onerror = (error) => {
+                console.error('EventSource错误:', error);
+                eventSource.close();
+            };
+            
+            // 当辩论完成时关闭事件源
+            eventSource.addEventListener('debate_complete', (event) => {
+                eventSource.close();
+            });
+            
+            return new Promise((resolve) => {
+                eventSource.addEventListener('debate_complete', () => {
+                    resolve();
+                });
+            });
+        }
+
+        // 渲染辩论历史（用于非流式模式）
+        function renderDebateHistory(debateHistory, container) {
+            // 按轮次分组显示辩论内容
+            let currentRound = 0;
+            let roundContainer = null;
+            
+            debateHistory.forEach(entry => {
+                if (entry.round !== currentRound) {
+                    currentRound = entry.round;
+                    roundContainer = document.createElement('div');
+                    roundContainer.className = 'mb-6';
+                    roundContainer.innerHTML = `<h3 class="text-lg font-semibold mb-3">第 ${currentRound} 轮</h3>`;
+                    container.appendChild(roundContainer);
+                }
+
+                const viewElement = document.createElement('div');
+                viewElement.className = `bg-white p-6 rounded-lg shadow mb-4`;
+                
+                const parsedContent = marked.parse(entry.content);
+                
+                viewElement.innerHTML = `
+                    <h4 class="text-lg font-semibold mb-2 ${entry.side === '正方' ? 'text-green-600' : 'text-red-600'}">${entry.side}观点</h4>
+                    <div class="text-gray-700 markdown-content">${parsedContent}</div>
+                `;
+                roundContainer.appendChild(viewElement);
+                
+                viewElement.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightElement(block);
+                });
+            });
         }
 
         function showError(message) {

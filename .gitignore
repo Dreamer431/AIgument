@@ -169,3 +169,15 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# 特定于本项目的忽略规则
+*.backup
+ersAdministratorDesktopAIgument*
+git
+.vscode/
+
+# 忽略临时或生成的文件
+src/agents/__pycache__/
+.venv/
+__pycache__/
+.DS_Store
