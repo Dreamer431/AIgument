@@ -180,32 +180,133 @@
                 padding: 10px;
             }
         }
+        
+        /* 模式选择样式 */
+        .mode-selector {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+            gap: 0.5rem;
+        }
+        
+        .mode-option {
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            background-color: #f0f4f8;
+            color: #4a5568;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .mode-option:hover {
+            background-color: #e2e8f0;
+        }
+        
+        .mode-option.active {
+            background-color: #ebf8ff;
+            color: #3498db;
+            border-color: #56CCF2;
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 640px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .mode-selector {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .mode-option {
+                width: 100%;
+                text-align: center;
+                margin-bottom: 0.5rem;
+            }
+        }
     </style>
 </head>
 <body class="min-h-screen bg-gray-100">
     <div class="container mx-auto px-4 py-8">
         <div class="text-center animate__animated animate__fadeIn">
             <h1 class="text-5xl font-bold mb-4 title-gradient">AIgument</h1>
-            <p class="text-gray-600 mb-8 text-lg mt-5">人工智能辩论平台</p>
+            <p class="text-gray-600 mb-8 text-lg mt-5">人工智能交互平台</p>
         </div>
         
         <div class="max-w-4xl mx-auto card p-6 animate__animated animate__fadeInUp">
+            <!-- 模式选择器 -->
+            <div class="mode-selector mb-6">
+                <div class="mode-option active" data-mode="debate">辩论模式</div>
+                <div class="mode-option" data-mode="chat">AI对话模式</div>
+                <div class="mode-option" data-mode="qa">问答模式</div>
+            </div>
+            
             <div class="mb-6">
-                <label class="block text-gray-700 text-sm font-bold mb-2">辩论主题</label>
+                <label class="block text-gray-700 text-sm font-bold mb-2" id="topic-label">辩论主题</label>
                 <input type="text" id="topic" 
                        class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
                        placeholder="请输入辩论主题">
             </div>
 
-            <div class="mb-6">
-                <label class="block text-gray-700 text-sm font-bold mb-2">辩论轮数</label>
-                <select id="rounds" class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all appearance-none">
-                    <option value="1">1轮</option>
-                    <option value="2">2轮</option>
-                    <option value="3" selected>3轮</option>
-                    <option value="4">4轮</option>
-                    <option value="5">5轮</option>
-                </select>
+            <!-- 辩论模式特有设置 -->
+            <div id="debate-settings">
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">辩论轮数</label>
+                    <select id="rounds" class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all appearance-none">
+                        <option value="1">1轮</option>
+                        <option value="2">2轮</option>
+                        <option value="3" selected>3轮</option>
+                        <option value="4">4轮</option>
+                        <option value="5">5轮</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- 交流模式特有设置 -->
+            <div id="chat-settings" class="hidden">
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">第一个AI角色</label>
+                    <select id="chat-role-1" class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all appearance-none">
+                        <option value="friend">朋友</option>
+                        <option value="expert">专家</option>
+                        <option value="teacher">老师</option>
+                        <option value="student">学生</option>
+                    </select>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">第二个AI角色</label>
+                    <select id="chat-role-2" class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all appearance-none">
+                        <option value="friend">朋友</option>
+                        <option value="expert" selected>专家</option>
+                        <option value="teacher">老师</option>
+                        <option value="student">学生</option>
+                    </select>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">对话轮数</label>
+                    <select id="chat-rounds" class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all appearance-none">
+                        <option value="1">1轮</option>
+                        <option value="2">2轮</option>
+                        <option value="3" selected>3轮</option>
+                        <option value="4">4轮</option>
+                        <option value="5">5轮</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- 问答模式特有设置 -->
+            <div id="qa-settings" class="hidden">
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">问答风格</label>
+                    <select id="qa-style" class="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all appearance-none">
+                        <option value="detailed">详细解答</option>
+                        <option value="concise">简洁回答</option>
+                        <option value="socratic">苏格拉底式问答</option>
+                    </select>
+                </div>
             </div>
             
             <div class="mb-6">
@@ -219,9 +320,9 @@
                 </label>
             </div>
             
-            <button onclick="startDebate()" 
+            <button onclick="startInteraction()" 
                     class="w-full btn-primary py-3 rounded-lg transition-all mb-6">
-                <span class="inline-block">开始辩论</span>
+                <span class="inline-block" id="start-button-text">开始辩论</span>
             </button>
 
             <div id="loading" class="hidden text-center mb-6 animate__animated animate__fadeIn">
@@ -230,11 +331,24 @@
                     <div class="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.2s; animation-duration: 1.2s;"></div>
                     <div class="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style="animation-delay: 0.3s; animation-duration: 1.2s;"></div>
                 </div>
-                <p class="mt-4 text-gray-600">AI辩手正在激烈讨论中...</p>
+                <p class="mt-4 text-gray-600" id="loading-text">AI辩手正在激烈讨论中...</p>
             </div>
 
             <div id="results" class="space-y-6 hidden animate__animated animate__fadeIn">
                 <div id="debate-history" class="space-y-4"></div>
+            </div>
+            
+            <!-- 交流和问答模式的输入框 -->
+            <div id="chat-input-container" class="hidden mt-6 animate__animated animate__fadeIn">
+                <div class="flex">
+                    <input type="text" id="chat-input" 
+                           class="flex-grow px-4 py-3 rounded-l-lg border focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+                           placeholder="输入您的消息...">
+                    <button onclick="sendMessage()" 
+                            class="bg-blue-500 hover:bg-blue-600 text-white px-6 rounded-r-lg transition-all">
+                        发送
+                    </button>
+                </div>
             </div>
 
             <div id="error" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded animate__animated animate__shakeX"></div>
@@ -317,48 +431,334 @@
             addNextNode();
         }
 
-        async function startDebate() {
+        // 模式选择功能
+        const modeOptions = document.querySelectorAll('.mode-option');
+        let currentMode = 'debate'; // 默认为辩论模式
+        
+        modeOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                // 移除所有选项的active类
+                modeOptions.forEach(opt => opt.classList.remove('active'));
+                // 为当前选项添加active类
+                this.classList.add('active');
+                
+                // 获取并设置当前模式
+                currentMode = this.getAttribute('data-mode');
+                
+                // 更新UI显示
+                updateUIForMode(currentMode);
+            });
+        });
+        
+        // 根据模式更新UI
+        function updateUIForMode(mode) {
+            // 隐藏所有模式特有设置
+            document.getElementById('debate-settings').classList.add('hidden');
+            document.getElementById('chat-settings').classList.add('hidden');
+            document.getElementById('qa-settings').classList.add('hidden');
+            document.getElementById('chat-input-container').classList.add('hidden');
+            
+            // 显示当前模式的设置
+            if (mode === 'debate') {
+                document.getElementById('debate-settings').classList.remove('hidden');
+                document.getElementById('topic-label').textContent = '辩论主题';
+                document.getElementById('topic').placeholder = '请输入辩论主题';
+                document.getElementById('start-button-text').textContent = '开始辩论';
+                document.getElementById('loading-text').textContent = 'AI辩手正在激烈讨论中...';
+            } else if (mode === 'chat') {
+                document.getElementById('chat-settings').classList.remove('hidden');
+                document.getElementById('topic-label').textContent = '对话主题';
+                document.getElementById('topic').placeholder = '请输入对话主题';
+                document.getElementById('start-button-text').textContent = '开始AI对话';
+                document.getElementById('loading-text').textContent = 'AI角色正在对话中...';
+            } else if (mode === 'qa') {
+                document.getElementById('qa-settings').classList.remove('hidden');
+                document.getElementById('topic-label').textContent = '问题';
+                document.getElementById('topic').placeholder = '请输入您的问题';
+                document.getElementById('start-button-text').textContent = '提问';
+                document.getElementById('loading-text').textContent = 'AI正在思考答案...';
+            }
+        }
+        
+        // 开始交互（统一入口函数）
+        async function startInteraction() {
             const topic = document.getElementById('topic').value.trim();
-            const rounds = parseInt(document.getElementById('rounds').value);
-            const streamMode = document.getElementById('stream-mode').checked;
             
             if (!topic) {
-                showError('请输入辩论主题');
+                showError(currentMode === 'debate' ? '请输入辩论主题' : 
+                          currentMode === 'chat' ? '请输入对话主题' : '请输入您的问题');
                 return;
             }
-
+            
             // 显示加载状态和结果容器
             document.getElementById('loading').classList.remove('hidden');
             document.getElementById('error').classList.add('hidden');
             document.getElementById('results').classList.remove('hidden');
-
-            // 清空之前的辩论内容
+            
+            // 清空之前的内容
             const historyContainer = document.getElementById('debate-history');
             historyContainer.innerHTML = '';
             
-            // 显示主题
-            const topicElement = document.createElement('div');
-            topicElement.className = 'card p-4 animate__animated animate__fadeIn';
-            topicElement.innerHTML = `<h2 class="text-xl font-bold text-blue-600">辩论主题：${topic}</h2>`;
-            historyContainer.appendChild(topicElement);
-
             try {
-                if (streamMode) {
-                    // 使用流式模式
-                    await streamDebate(topic, rounds, historyContainer);
-                } else {
-                    // 使用传统非流式模式
-                    await regularDebate(topic, rounds, historyContainer);
+                if (currentMode === 'debate') {
+                    // 辩论模式
+                    const rounds = parseInt(document.getElementById('rounds').value);
+                    const streamMode = document.getElementById('stream-mode').checked;
+                    
+                    // 显示主题
+                    const topicElement = document.createElement('div');
+                    topicElement.className = 'card p-4 animate__animated animate__fadeIn';
+                    topicElement.innerHTML = `<h2 class="text-xl font-bold text-blue-600">辩论主题：${topic}</h2>`;
+                    historyContainer.appendChild(topicElement);
+                    
+                    if (streamMode) {
+                        await streamDebate(topic, rounds, historyContainer);
+                    } else {
+                        await regularDebate(topic, rounds, historyContainer);
+                    }
+                } else if (currentMode === 'chat') {
+                    // AI对话模式
+                    const role1 = document.getElementById('chat-role-1').value;
+                    const role2 = document.getElementById('chat-role-2').value;
+                    const chatRounds = parseInt(document.getElementById('chat-rounds').value);
+                    const streamMode = document.getElementById('stream-mode').checked;
+                    
+                    // 显示主题
+                    const topicElement = document.createElement('div');
+                    topicElement.className = 'card p-4 animate__animated animate__fadeIn';
+                    topicElement.innerHTML = `<h2 class="text-xl font-bold text-blue-600">对话主题：${topic}</h2>`;
+                    historyContainer.appendChild(topicElement);
+                    
+                    // 开始AI对话
+                    await aiConversation(topic, role1, role2, chatRounds, streamMode, historyContainer);
+                } else if (currentMode === 'qa') {
+                    // 问答模式
+                    const style = document.getElementById('qa-style').value;
+                    
+                    // 显示问题
+                    const questionElement = document.createElement('div');
+                    questionElement.className = 'card p-4 animate__animated animate__fadeIn';
+                    questionElement.innerHTML = `<h2 class="text-xl font-bold text-blue-600">问题：${topic}</h2>`;
+                    historyContainer.appendChild(questionElement);
+                    
+                    // 获取答案
+                    await getAnswer(topic, style, historyContainer);
+                    
+                    // 显示输入框用于追问
+                    document.getElementById('chat-input-container').classList.remove('hidden');
                 }
             } catch (error) {
-                console.error('辩论过程出错:', error);
+                console.error('交互过程出错:', error);
                 showError('请求失败，请稍后重试');
             } finally {
                 document.getElementById('loading').classList.add('hidden');
             }
         }
+        
+        // 发送消息（用于交流和问答模式）
+        async function sendMessage() {
+            const messageInput = document.getElementById('chat-input');
+            const message = messageInput.value.trim();
+            
+            if (!message) {
+                return;
+            }
+            
+            // 清空输入框
+            messageInput.value = '';
+            
+            // 显示用户消息
+            const historyContainer = document.getElementById('debate-history');
+            const userMessageElement = document.createElement('div');
+            userMessageElement.className = 'card p-4 mb-4 animate__animated animate__fadeIn';
+            userMessageElement.innerHTML = `
+                <h4 class="text-lg font-semibold mb-2 text-gray-700">您</h4>
+                <div class="text-gray-700">${message}</div>
+            `;
+            historyContainer.appendChild(userMessageElement);
+            
+            // 显示加载状态
+            document.getElementById('loading').classList.remove('hidden');
+            
+            try {
+                // 根据当前模式处理消息
+                if (currentMode === 'chat') {
+                    await processChatMessage(message, historyContainer);
+                } else if (currentMode === 'qa') {
+                    const style = document.getElementById('qa-style').value;
+                    await processFollowUpQuestion(message, style, historyContainer);
+                }
+            } catch (error) {
+                console.error('消息处理出错:', error);
+                showError('请求失败，请稍后重试');
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+        
+        // 初始化交流（交流模式）
+        async function initializeChat(topic, role, container) {
+            // 这里应该调用后端API初始化交流
+            // 由于后端API可能尚未实现，这里使用模拟数据
+            
+            // 模拟AI回应
+            const aiResponseElement = document.createElement('div');
+            aiResponseElement.className = 'card p-6 mb-4 animate__animated animate__fadeIn';
+            
+            const contentElement = document.createElement('div');
+            contentElement.className = 'text-gray-700 markdown-content';
+            
+            aiResponseElement.innerHTML = `
+                <h4 class="text-lg font-semibold mb-2 text-blue-600">AI助手</h4>
+            `;
+            
+            aiResponseElement.appendChild(contentElement);
+            container.appendChild(aiResponseElement);
+            
+            // 使用打字机效果显示内容
+            const roleMessages = {
+                'friend': `嗨！很高兴能和你聊聊"${topic}"这个话题。作为朋友，我很想听听你的想法和感受。有什么特别想分享的吗？`,
+                'expert': `您好！我很乐意就"${topic}"这个主题与您交流。作为这个领域的专家，我可以提供一些专业的见解和分析。您有什么具体想了解的方面吗？`,
+                'teacher': `您好！很高兴能和您讨论"${topic}"这个主题。作为老师，我希望能帮助您更深入地理解这个话题。您有什么疑问或者想探讨的角度吗？`,
+                'student': `您好！我对"${topic}"这个主题很感兴趣，希望能向您学习。作为学生，我有很多好奇和疑问，期待您的指导和分享。`
+            };
+            
+            typeWriter(contentElement, roleMessages[role] || roleMessages['friend']);
+            
+            return new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+        // 处理交流消息（交流模式）
+        async function processChatMessage(message, container) {
+            // 这里应该调用后端API处理交流消息
+            // 由于后端API可能尚未实现，这里使用模拟数据
+            
+            // 模拟AI回应
+            const aiResponseElement = document.createElement('div');
+            aiResponseElement.className = 'card p-6 mb-4 animate__animated animate__fadeIn';
+            
+            const contentElement = document.createElement('div');
+            contentElement.className = 'text-gray-700 markdown-content';
+            
+            aiResponseElement.innerHTML = `
+                <h4 class="text-lg font-semibold mb-2 text-blue-600">AI助手</h4>
+            `;
+            
+            aiResponseElement.appendChild(contentElement);
+            container.appendChild(aiResponseElement);
+            
+            // 使用打字机效果显示内容
+            const response = `谢谢您的分享！这是一个很有趣的观点。我认为${message.length > 10 ? message.substring(0, 10) + '...' : message}确实值得深入探讨。
 
-        // 传统非流式辩论模式
+从不同角度来看：
+1. 这个话题涉及到很多方面的考量
+2. 每个人的经历和背景会影响对此的理解
+3. 社会环境和时代背景也是重要因素
+
+您对这些方面有什么特别的见解吗？我很期待继续听取您的想法。`;
+            
+            typeWriter(contentElement, response);
+            
+            return new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+        // 获取答案（问答模式）
+        async function getAnswer(question, style, container) {
+            // 这里应该调用后端API获取答案
+            // 由于后端API可能尚未实现，这里使用模拟数据
+            
+            // 模拟AI回应
+            const aiResponseElement = document.createElement('div');
+            aiResponseElement.className = 'card p-6 mb-4 animate__animated animate__fadeIn';
+            
+            const contentElement = document.createElement('div');
+            contentElement.className = 'text-gray-700 markdown-content';
+            
+            aiResponseElement.innerHTML = `
+                <h4 class="text-lg font-semibold mb-2 text-blue-600">AI助手</h4>
+            `;
+            
+            aiResponseElement.appendChild(contentElement);
+            container.appendChild(aiResponseElement);
+            
+            // 根据不同风格生成不同回答
+            let response = '';
+            if (style === 'detailed') {
+                response = `关于"${question}"，我可以提供一个详细的解答：
+
+## 背景知识
+这个问题涉及到多个领域的知识，包括...
+
+## 核心概念
+首先，我们需要理解几个关键概念：
+1. 第一个重要概念...
+2. 第二个重要概念...
+
+## 分析
+从多个角度分析这个问题：
+- 从理论层面...
+- 从实践角度...
+- 从历史发展来看...
+
+## 结论
+综合以上分析，我们可以得出...
+
+希望这个详细的解答对您有所帮助！如果您有任何后续问题，请随时提出。`;
+            } else if (style === 'concise') {
+                response = `关于"${question}"，简洁回答如下：
+
+这个问题的核心在于...（关键点）。从主要证据来看，可以得出...（结论）。
+
+需要注意的是...（重要提示）。`;
+            } else if (style === 'socratic') {
+                response = `关于"${question}"，我想请您思考以下几个问题：
+
+1. 您认为这个问题的核心是什么？
+2. 如果从不同角度看，会有什么不同的理解？
+3. 这个问题的前提假设是否成立？
+
+思考这些问题可能会帮助您找到更深层次的答案。您对第一个问题有什么想法？`;
+            }
+            
+            typeWriter(contentElement, response);
+            
+            return new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+        // 处理追问（问答模式）
+        async function processFollowUpQuestion(question, style, container) {
+            // 这里应该调用后端API处理追问
+            // 由于后端API可能尚未实现，这里使用模拟数据
+            
+            // 模拟AI回应
+            const aiResponseElement = document.createElement('div');
+            aiResponseElement.className = 'card p-6 mb-4 animate__animated animate__fadeIn';
+            
+            const contentElement = document.createElement('div');
+            contentElement.className = 'text-gray-700 markdown-content';
+            
+            aiResponseElement.innerHTML = `
+                <h4 class="text-lg font-semibold mb-2 text-blue-600">AI助手</h4>
+            `;
+            
+            aiResponseElement.appendChild(contentElement);
+            container.appendChild(aiResponseElement);
+            
+            // 使用打字机效果显示内容
+            const response = `感谢您的追问！
+
+关于"${question}"，我可以进一步解释：
+
+这是一个很好的后续问题，它帮助我们更深入地探讨了主题的核心。从专业角度来看，这涉及到...
+
+希望这个解答对您有帮助。您还有其他疑问吗？`;
+            
+            typeWriter(contentElement, response);
+            
+            return new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        // 原有的辩论相关函数保持不变
         async function regularDebate(topic, rounds, historyContainer) {
             const response = await fetch('/api/debate', {
                 method: 'POST',
@@ -377,7 +777,6 @@
             }
         }
 
-        // 流式辩论模式
         async function streamDebate(topic, rounds, historyContainer) {
             // 初始化辩论
             const initResponse = await fetch('/api/debate/init', {
@@ -472,7 +871,6 @@
             });
         }
 
-        // 渲染辩论历史（用于非流式模式）
         function renderDebateHistory(debateHistory, container) {
             // 按轮次分组显示辩论内容
             let currentRound = 0;
@@ -521,6 +919,157 @@
             setTimeout(() => {
                 errorDiv.classList.remove('animate__animated', 'animate__shakeX');
             }, 1000);
+        }
+
+        // 添加AI对话功能
+        async function aiConversation(topic, role1, role2, rounds, streamMode, container) {
+            // 这里应该调用后端API进行AI对话
+            // 由于后端API可能尚未实现，这里使用模拟数据
+            
+            // 角色名称映射
+            const roleNames = {
+                'friend': '朋友',
+                'expert': '专家',
+                'teacher': '老师',
+                'student': '学生'
+            };
+            
+            // 角色颜色映射
+            const roleColors = {
+                'friend': 'text-green-600',
+                'expert': 'text-purple-600',
+                'teacher': 'text-blue-600',
+                'student': 'text-orange-600'
+            };
+            
+            // 模拟对话内容
+            const conversations = [
+                {
+                    role1: `作为一名${roleNames[role1]}，我认为${topic}这个话题非常有意思。从我的角度来看，这涉及到几个关键方面：
+
+首先，我们需要考虑**背景因素**和**历史发展**。这不仅仅是一个简单的问题，而是涉及到多层面的复杂议题。
+
+其次，我想强调的是，在讨论这个话题时，我们应该保持开放的心态，尝试从不同角度理解问题。
+
+您作为${roleNames[role2]}，对此有什么看法呢？`,
+                    
+                    role2: `感谢您的见解。作为一名${roleNames[role2]}，我想补充几点关于${topic}的专业观点：
+
+1. **专业视角**：从专业角度看，这个话题涉及到许多技术细节和专业知识
+2. **实践经验**：根据我的经验，实际应用中常常会遇到理论与实践的差距
+3. **未来趋势**：我认为未来发展将朝向更加整合和系统化的方向
+
+我很欣赏您作为${roleNames[role1]}提出的那些观点，特别是关于保持开放心态的建议。不过，您是否考虑过这个问题的实际操作层面？`
+                },
+                {
+                    role1: `您提出的实际操作层面确实是一个很好的切入点。作为${roleNames[role1]}，我认为实践中需要注意以下几点：
+
+- **灵活应对**：不同情境可能需要不同的解决方案
+- **持续学习**：随着新信息的出现，我们的理解也应该不断更新
+- **协作精神**：集思广益往往能产生更好的结果
+
+关于您提到的未来趋势，我很好奇您能否分享一些具体的预测或者案例？这将帮助我更好地理解您的观点。`,
+                    
+                    role2: `非常高兴您对未来趋势感兴趣。作为${roleNames[role2]}，我可以分享一些具体的预测：
+
+> "根据最新研究，未来五年内，我们可能会看到这个领域的三大转变..."
+
+具体来说：
+1. **技术融合**：不同技术领域的边界将变得更加模糊
+2. **个性化解决方案**：标准化方案将让位于更加定制化的解决方案
+3. **伦理考量**：随着技术发展，伦理问题将成为核心关注点
+
+您作为${roleNames[role1]}提到的协作精神确实至关重要。您认为在促进不同背景人士的协作方面，有哪些有效的策略？`
+                },
+                {
+                    role1: `关于促进不同背景人士协作的策略，作为${roleNames[role1]}，我有以下几点建议：
+
+1. **创建共同语言**：确保所有参与者对关键概念有共同理解
+2. **设定明确目标**：清晰的目标有助于团队保持一致方向
+3. **重视多元视角**：将不同观点视为资源而非障碍
+4. **建立信任机制**：信任是有效协作的基础
+
+我对您提到的伦理考量特别感兴趣。在${topic}这个领域，您认为最紧迫的伦理挑战是什么？我们应该如何平衡创新与伦理责任？`,
+                    
+                    role2: `您提出了一个非常深刻的问题。作为${roleNames[role2]}，我认为在${topic}领域，最紧迫的伦理挑战包括：
+
+**隐私与透明度**：如何在收集必要数据的同时保护个人隐私
+**公平与包容**：确保技术发展不会加剧现有的社会不平等
+**责任归属**：在复杂系统中明确责任边界
+
+平衡创新与伦理责任需要：
+- 前瞻性伦理评估
+- 多方利益相关者参与决策
+- 建立适应性监管框架
+- 持续的社会对话
+
+您作为${roleNames[role1]}提出的协作策略非常实用。特别是"将不同观点视为资源而非障碍"这一点，体现了真正的智慧。这次对话让我获益良多，感谢您的深入交流！`
+                }
+            ];
+            
+            // 创建轮次容器
+            for (let i = 0; i < rounds; i++) {
+                if (i >= conversations.length) break; // 防止超出模拟数据范围
+                
+                const roundContainer = document.createElement('div');
+                roundContainer.className = 'mb-6 animate__animated animate__fadeIn';
+                roundContainer.style.animationDelay = `${i*0.3}s`;
+                roundContainer.innerHTML = `<h3 class="text-lg font-semibold mb-3">第 ${i+1} 轮对话</h3>`;
+                container.appendChild(roundContainer);
+                
+                // 第一个角色发言
+                const role1Element = document.createElement('div');
+                role1Element.className = 'card p-6 mb-4 animate__animated animate__fadeIn';
+                role1Element.style.animationDelay = `${i*0.3 + 0.1}s`;
+                
+                const role1ContentElement = document.createElement('div');
+                role1ContentElement.className = 'text-gray-700 markdown-content';
+                
+                role1Element.innerHTML = `
+                    <h4 class="text-lg font-semibold mb-2 ${roleColors[role1]}">AI角色1 (${roleNames[role1]})</h4>
+                `;
+                
+                role1Element.appendChild(role1ContentElement);
+                roundContainer.appendChild(role1Element);
+                
+                // 第二个角色发言
+                const role2Element = document.createElement('div');
+                role2Element.className = 'card p-6 mb-4 animate__animated animate__fadeIn';
+                role2Element.style.animationDelay = `${i*0.3 + 0.2}s`;
+                
+                const role2ContentElement = document.createElement('div');
+                role2ContentElement.className = 'text-gray-700 markdown-content';
+                
+                role2Element.innerHTML = `
+                    <h4 class="text-lg font-semibold mb-2 ${roleColors[role2]}">AI角色2 (${roleNames[role2]})</h4>
+                `;
+                
+                role2Element.appendChild(role2ContentElement);
+                roundContainer.appendChild(role2Element);
+                
+                // 使用打字机效果显示内容
+                if (streamMode) {
+                    // 模拟流式输出
+                    typeWriter(role1ContentElement, conversations[i].role1);
+                    setTimeout(() => {
+                        typeWriter(role2ContentElement, conversations[i].role2);
+                    }, 3000); // 延迟显示第二个角色的回复
+                } else {
+                    // 直接显示全部内容
+                    role1ContentElement.innerHTML = marked.parse(conversations[i].role1);
+                    role2ContentElement.innerHTML = marked.parse(conversations[i].role2);
+                    
+                    // 应用代码高亮
+                    role1ContentElement.querySelectorAll('pre code').forEach((block) => {
+                        hljs.highlightElement(block);
+                    });
+                    role2ContentElement.querySelectorAll('pre code').forEach((block) => {
+                        hljs.highlightElement(block);
+                    });
+                }
+            }
+            
+            return new Promise(resolve => setTimeout(resolve, 1000));
         }
     </script>
 </body>
