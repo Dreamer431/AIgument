@@ -3,7 +3,7 @@
  */
 
 // 处理问答模式
-async function processQuestion(question, style, container) {
+async function processQuestion(question, style, container, provider = "deepseek", model = "deepseek-chat") {
     try {
         // 清除现有的回答
         container.innerHTML = '';
@@ -126,7 +126,7 @@ async function processQuestion(question, style, container) {
         document.getElementById('send-follow-up').addEventListener('click', async () => {
             const followUpQuestion = document.getElementById('follow-up-question').value.trim();
             if (followUpQuestion) {
-                await processFollowUpQuestion(followUpQuestion, style, container);
+                await processFollowUpQuestion(followUpQuestion, style, container, provider, model);
                 document.getElementById('follow-up-question').value = ''; // 清空输入框
             }
         });
@@ -139,7 +139,7 @@ async function processQuestion(question, style, container) {
 }
 
 // 处理追问
-async function processFollowUpQuestion(question, style, container) {
+async function processFollowUpQuestion(question, style, container, provider = "deepseek", model = "deepseek-chat") {
     try {
         // 创建用户追问区域
         const questionElement = document.createElement('div');
