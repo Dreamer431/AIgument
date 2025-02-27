@@ -26,7 +26,9 @@ except locale.Error:
     except:
         pass
 
-app = Flask(__name__)
+app = Flask(__name__, 
+            static_folder='static',  # 设置静态文件夹的路径
+            static_url_path='/static')  # 设置静态文件URL前缀
 load_dotenv()
 
 # 配置
@@ -74,7 +76,19 @@ def create_debater(name, position, api_key, model):
 
 @app.route('/')
 def index():
+    """首页"""
     return render_template('index.html')
+
+# 添加一个路由以便在开发过程中重新加载静态文件
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """提供静态文件的路由，用于开发过程中防止缓存问题"""
+    response = app.send_static_file(filename)
+    # 添加no-cache头，防止浏览器缓存
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @app.route('/api/debate', methods=['POST'])
 def debate():
@@ -210,6 +224,44 @@ def stream_debate():
     
     # 返回流式响应
     return Response(stream_with_context(generate()), mimetype="text/event-stream")
+
+@app.route('/api/debate/single', methods=['POST'])
+def single_debate():
+    """单次辩论接口，用于逐步生成辩论内容"""
+    try:
+        data = request.json
+        topic = data.get('topic')  # 当前的辩论主题或上一轮的回应
+        side = data.get('side')    # 正方或反方
+        round_num = data.get('round', 1)  # 当前轮次
+        
+        if not topic or not side:
+            return jsonify({'error': '请提供辩论主题和辩论方'}), 400
+            
+        # 验证参数
+        if side not in ['正方', '反方']:
+            return jsonify({'error': '辩论方必须为"正方"或"反方"'}), 400
+            
+        api_key = get_api_key()
+        
+        # 根据辩论方创建辩论者
+        if side == '正方':
+            debater = create_debater("正方", "支持", api_key, DEFAULT_CONFIG["model"])
+        else:
+            debater = create_debater("反方", "反对", api_key, DEFAULT_CONFIG["model"])
+            
+        # 生成回应
+        response_content = debater.generate_response(topic)
+        
+        # 返回生成的内容
+        return jsonify({
+            'side': side,
+            'round': round_num,
+            'content': response_content,
+        })
+        
+    except Exception as e:
+        print(f"单次辩论错误: {str(e)}")
+        return jsonify({'error': f'{side}生成回应时发生错误：{str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True) 

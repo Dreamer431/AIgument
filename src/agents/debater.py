@@ -58,22 +58,34 @@ class Debater:
             for msg in messages:
                 print(f"- {msg['role']}: {msg['content'][:50]}...")
             
-            # 调用API生成回应
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=0.7,  # 控制回答的创造性
-                max_tokens=2000   # 控制回答的最大长度
-            )
+            # 调用API生成回应并添加错误捕获和重试机制
+            max_retries = 3
+            retry_count = 0
             
-            # 获取生成的回应
-            response_content = response.choices[0].message.content
-            
-            # 更新对话历史
-            self.conversation_history.append({"role": "user", "content": opponent_message})
-            self.conversation_history.append({"role": "assistant", "content": response_content})
-            
-            return response_content
+            while retry_count < max_retries:
+                try:
+                    response = self.client.chat.completions.create(
+                        model=self.model,
+                        messages=messages,
+                        temperature=0.7,  # 控制回答的创造性
+                        max_tokens=2000   # 控制回答的最大长度
+                    )
+                    
+                    # 获取生成的回应
+                    response_content = response.choices[0].message.content
+                    
+                    # 更新对话历史
+                    self.conversation_history.append({"role": "user", "content": opponent_message})
+                    self.conversation_history.append({"role": "assistant", "content": response_content})
+                    
+                    return response_content
+                except Exception as retry_error:
+                    retry_count += 1
+                    print(f"API调用失败，尝试第 {retry_count} 次重试。错误: {str(retry_error)}")
+                    if retry_count >= max_retries:
+                        raise retry_error
+                    import time
+                    time.sleep(1)  # 重试前稍微等待一段时间
             
         except Exception as e:
             print(f"\n=== API调用错误 ===")
