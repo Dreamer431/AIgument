@@ -35,6 +35,7 @@ load_dotenv()
 DEFAULT_CONFIG = {
     "rounds": 3,
     "delay": 1,
+    "provider": "deepseek",
     "model": "deepseek-chat",
     "encoding": "utf-8",
     "api_base": "https://api.deepseek.com/v1"
@@ -44,14 +45,22 @@ DEFAULT_CONFIG = {
 if 'DEEPSEEK_API_BASE' not in os.environ:
     os.environ['DEEPSEEK_API_BASE'] = DEFAULT_CONFIG["api_base"]
 
-def get_api_key():
+def get_api_key(provider="deepseek"):
     """获取API密钥"""
-    api_key = os.getenv('DEEPSEEK_API_KEY')
-    if not api_key:
-        raise ValueError("未找到DEEPSEEK_API_KEY环境变量")
+    if provider == "deepseek":
+        api_key = os.getenv('DEEPSEEK_API_KEY')
+        if not api_key:
+            raise ValueError("未找到DEEPSEEK_API_KEY环境变量")
+    elif provider == "openai":
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            raise ValueError("未找到OPENAI_API_KEY环境变量")
+    else:
+        raise ValueError(f"不支持的提供商: {provider}")
+    
     return api_key
 
-def create_debater(name, position, api_key, model):
+def create_debater(name, position, provider, model, api_key):
     """创建辩论者实例"""
     try:
         return Debater(
@@ -68,8 +77,9 @@ def create_debater(name, position, api_key, model):
 - 适当使用分隔线（---）分隔不同部分
 
 总之，利用Markdown格式让你的辩论更有条理、更有说服力。""",
-            api_key=api_key,
-            model=model
+            provider=provider,
+            model=model,
+            api_key=api_key
         )
     except Exception as e:
         raise Exception(f"创建辩手 {name} 时发生错误：{str(e)}")
@@ -97,6 +107,8 @@ def debate():
         topic = data.get('topic')
         rounds = data.get('rounds', DEFAULT_CONFIG["rounds"])
         stream = data.get('stream', False)  # 添加流式参数支持
+        provider = data.get('provider', DEFAULT_CONFIG["provider"])  # 新增参数
+        model = data.get('model', DEFAULT_CONFIG["model"])  # 新增参数
         
         if not topic:
             return jsonify({'error': '请提供辩论主题'}), 400
@@ -105,9 +117,9 @@ def debate():
         if stream:
             return jsonify({'error': '流式输出请使用 /api/debate/stream 端点'}), 400
 
-        api_key = get_api_key()
-        debater_1 = create_debater("正方", "支持", api_key, DEFAULT_CONFIG["model"])
-        debater_2 = create_debater("反方", "反对", api_key, DEFAULT_CONFIG["model"])
+        api_key = get_api_key(provider)
+        debater_1 = create_debater("正方", "支持", provider, model, api_key)
+        debater_2 = create_debater("反方", "反对", provider, model, api_key)
 
         debate_history = []
         current_message = topic
@@ -156,18 +168,22 @@ def init_debate():
         data = request.json
         topic = data.get('topic')
         rounds = data.get('rounds', DEFAULT_CONFIG["rounds"])
+        provider = data.get('provider', DEFAULT_CONFIG["provider"])  # 新增
+        model = data.get('model', DEFAULT_CONFIG["model"])  # 新增
         
         if not topic:
             return jsonify({'error': '请提供辩论主题'}), 400
             
         # 验证API密钥可用
-        api_key = get_api_key()
+        api_key = get_api_key(provider)
         
         return jsonify({
             'status': 'success',
             'message': '辩论初始化成功',
             'topic': topic,
-            'rounds': rounds
+            'rounds': rounds,
+            'provider': provider,
+            'model': model
         })
         
     except Exception as e:
@@ -178,15 +194,17 @@ def stream_debate():
     """流式辩论接口"""
     topic = request.args.get('topic')
     rounds = int(request.args.get('rounds', DEFAULT_CONFIG["rounds"]))
+    provider = request.args.get('provider', DEFAULT_CONFIG["provider"])  # 新增
+    model = request.args.get('model', DEFAULT_CONFIG["model"])  # 新增
     
     if not topic:
         return jsonify({'error': '请提供辩论主题'}), 400
     
     def generate():
         try:
-            api_key = get_api_key()
-            positive_debater = create_debater("正方", "支持", api_key, DEFAULT_CONFIG["model"])
-            negative_debater = create_debater("反方", "反对", api_key, DEFAULT_CONFIG["model"])
+            api_key = get_api_key(provider)
+            positive_debater = create_debater("正方", "支持", provider, model, api_key)
+            negative_debater = create_debater("反方", "反对", provider, model, api_key)
             
             # 初始消息为辩论主题
             current_message = topic
@@ -233,6 +251,8 @@ def single_debate():
         topic = data.get('topic')  # 当前的辩论主题或上一轮的回应
         side = data.get('side')    # 正方或反方
         round_num = data.get('round', 1)  # 当前轮次
+        provider = data.get('provider', DEFAULT_CONFIG["provider"])  # 新增
+        model = data.get('model', DEFAULT_CONFIG["model"])  # 新增
         
         if not topic or not side:
             return jsonify({'error': '请提供辩论主题和辩论方'}), 400
@@ -241,13 +261,13 @@ def single_debate():
         if side not in ['正方', '反方']:
             return jsonify({'error': '辩论方必须为"正方"或"反方"'}), 400
             
-        api_key = get_api_key()
+        api_key = get_api_key(provider)
         
         # 根据辩论方创建辩论者
         if side == '正方':
-            debater = create_debater("正方", "支持", api_key, DEFAULT_CONFIG["model"])
+            debater = create_debater("正方", "支持", provider, model, api_key)
         else:
-            debater = create_debater("反方", "反对", api_key, DEFAULT_CONFIG["model"])
+            debater = create_debater("反方", "反对", provider, model, api_key)
             
         # 生成回应
         response_content = debater.generate_response(topic)

@@ -3,7 +3,7 @@
  */
 
 // 对话模式功能
-async function startChat(topic, rounds, container, role1, role2, streamMode) {
+async function startChat(topic, rounds, container, role1, role2, streamMode, provider = "deepseek", model = "deepseek-chat") {
     try {
         // 模拟角色对话数据
         // 实际应用中应调用后端API
