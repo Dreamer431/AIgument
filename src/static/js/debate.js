@@ -3,7 +3,7 @@
  */
 
 // 常规非流式辩论
-async function regularDebate(topic, rounds, historyContainer) {
+async function regularDebate(topic, rounds, historyContainer, provider = "deepseek", model = "deepseek-chat") {
     try {
         // 创建轮次容器
         let roundContainers = {};
@@ -46,26 +46,30 @@ async function regularDebate(topic, rounds, historyContainer) {
                 body: JSON.stringify({ 
                     topic: currentMessage, 
                     side: '正方',
-                    round: round
+                    round: round,
+                    provider: provider,
+                    model: model
                 })
             });
             
             if (!positiveResponse.ok) {
-                throw new Error(`正方发言请求失败: ${positiveResponse.statusText}`);
+                const errorData = await positiveResponse.json();
+                throw new Error(errorData.error || '生成正方回应失败');
             }
             
             const positiveData = await positiveResponse.json();
             const positiveContent = positiveData.content;
             
-            // 显示正方观点
+            // 渲染正方内容
             const positiveContentElement = document.getElementById(`content-${positiveKey}`);
-            positiveContentElement.innerHTML = '';
-            typeWriter(positiveContentElement, positiveContent);
+            positiveContentElement.innerHTML = marked.parse(positiveContent);
             
-            // 等待正方观点显示完毕
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // 应用代码高亮
+            positiveContentElement.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
             
-            // 更新当前消息为正方的回应，用于反方回应
+            // 更新当前消息为正方回应
             currentMessage = positiveContent;
             
             // 创建反方容器
@@ -94,26 +98,30 @@ async function regularDebate(topic, rounds, historyContainer) {
                 body: JSON.stringify({ 
                     topic: currentMessage, 
                     side: '反方',
-                    round: round
+                    round: round,
+                    provider: provider,
+                    model: model
                 })
             });
             
             if (!negativeResponse.ok) {
-                throw new Error(`反方发言请求失败: ${negativeResponse.statusText}`);
+                const errorData = await negativeResponse.json();
+                throw new Error(errorData.error || '生成反方回应失败');
             }
             
             const negativeData = await negativeResponse.json();
             const negativeContent = negativeData.content;
             
-            // 显示反方观点
+            // 渲染反方内容
             const negativeContentElement = document.getElementById(`content-${negativeKey}`);
-            negativeContentElement.innerHTML = '';
-            typeWriter(negativeContentElement, negativeContent);
+            negativeContentElement.innerHTML = marked.parse(negativeContent);
             
-            // 等待反方观点显示完毕，然后进入下一轮
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // 应用代码高亮
+            negativeContentElement.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
             
-            // 更新当前消息为反方的回应，用于下一轮
+            // 更新当前消息为反方回应
             currentMessage = negativeContent;
         }
         
@@ -124,20 +132,23 @@ async function regularDebate(topic, rounds, historyContainer) {
 }
 
 // 流式辩论
-async function streamDebate(topic, rounds, historyContainer) {
+async function streamDebate(topic, rounds, historyContainer, provider = "deepseek", model = "deepseek-chat") {
     try {
         // 初始化辩论
         const initResponse = await fetch('/api/debate/init', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ topic, rounds })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ 
+                topic, 
+                rounds,
+                provider,
+                model
+            })
         });
-
+        
         if (!initResponse.ok) {
-            const error = await initResponse.json();
-            throw new Error(error.message || '初始化辩论失败');
+            const errorData = await initResponse.json();
+            throw new Error(errorData.error || '初始化辩论失败');
         }
         
         // 创建轮次容器
@@ -175,23 +186,16 @@ async function streamDebate(topic, rounds, historyContainer) {
             }
         }
         
-        // 开始流式接收辩论内容
-        const eventSource = new EventSource(`/api/debate/stream?topic=${encodeURIComponent(topic)}&rounds=${rounds}`);
+        // 设置SSE来接收流式内容
+        const eventSource = new EventSource(`/api/debate/stream?topic=${encodeURIComponent(topic)}&rounds=${rounds}&provider=${provider}&model=${model}`);
         
-        eventSource.onmessage = (event) => {
+        eventSource.onmessage = function(event) {
             const data = JSON.parse(event.data);
-            if (data.type === 'content') {
+            
+            if (data.type === "content") {
                 const key = `${data.round}-${data.side}`;
                 const contentElement = contentElements[key];
-                
-                // 使用打字机效果逐步显示内容
                 if (contentElement) {
-                    // 如果是第一次更新内容，清除"正在思考中..."的提示
-                    if (contentElement.querySelector('.pulse')) {
-                        contentElement.innerHTML = '';
-                    }
-                    
-                    // 使用打字机效果显示内容
                     contentElement.innerHTML = marked.parse(data.content);
                     
                     // 应用代码高亮
@@ -202,22 +206,31 @@ async function streamDebate(topic, rounds, historyContainer) {
             }
         };
         
-        eventSource.onerror = (error) => {
-            console.error('EventSource错误:', error);
+        eventSource.addEventListener('debate_complete', function(event) {
             eventSource.close();
-            showError('辩论流式生成过程中发生错误，请重试');
-        };
-        
-        // 当辩论完成时关闭事件源
-        eventSource.addEventListener('debate_complete', (event) => {
-            eventSource.close();
+            const data = JSON.parse(event.data);
+            console.log('辩论完成:', data.message);
         });
         
-        return new Promise((resolve) => {
+        eventSource.addEventListener('error', function(event) {
+            eventSource.close();
+            const data = event.data ? JSON.parse(event.data) : { message: '流式接收数据时出错' };
+            console.error('流式辩论错误:', data.message);
+            showError(data.message);
+        });
+        
+        // 返回一个Promise，等待辩论完成
+        return new Promise((resolve, reject) => {
             eventSource.addEventListener('debate_complete', () => {
                 resolve();
             });
+            
+            eventSource.addEventListener('error', (event) => {
+                const data = event.data ? JSON.parse(event.data) : { message: '流式接收数据时出错' };
+                reject(new Error(data.message));
+            });
         });
+        
     } catch (error) {
         console.error('流式辩论请求失败:', error);
         showError(error.message || '生成辩论内容时出错');

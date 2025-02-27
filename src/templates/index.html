@@ -104,6 +104,26 @@
                 <span class="ml-3 text-sm font-medium text-gray-700">流式输出</span>
             </div>
             
+            <!-- 模型设置 -->
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2">模型设置</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm mb-1">服务提供商</label>
+                        <select id="provider-select" class="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            <option value="deepseek">DeepSeek</option>
+                            <option value="openai">OpenAI</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm mb-1">模型</label>
+                        <select id="model-select" class="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            <!-- 动态加载模型选项 -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
             <div class="text-center">
                 <button id="start-button" class="btn-primary">
                     开始辩论
