@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, Response, stream_with_context
+from flask import Flask, render_template, request, jsonify, Response, stream_with_context, send_from_directory
 from dotenv import load_dotenv
 import os
 import sys
@@ -6,6 +6,11 @@ import time
 from agents.debater import Debater
 import locale
 import json
+from flask_cors import CORS
+from datetime import datetime, timedelta
+from models import db, Session, Message
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import inspect
 
 # 设置默认编码为UTF-8
 if sys.stdout.encoding != 'utf-8':
@@ -29,6 +34,7 @@ except locale.Error:
 app = Flask(__name__, 
             static_folder='static',  # 设置静态文件夹的路径
             static_url_path='/static')  # 设置静态文件URL前缀
+CORS(app)
 load_dotenv()
 
 # 配置
@@ -44,6 +50,27 @@ DEFAULT_CONFIG = {
 # 确保API基础URL正确设置
 if 'DEEPSEEK_API_BASE' not in os.environ:
     os.environ['DEEPSEEK_API_BASE'] = DEFAULT_CONFIG["api_base"]
+
+# 数据库配置
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "instance", "aigument.db")}'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# 初始化数据库
+db.init_app(app)
+
+# 创建数据库表
+with app.app_context():
+    print("正在创建数据库表...")
+    try:
+        db.create_all()
+        print("数据库表创建成功！")
+        # 检查表是否存在
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        print(f"当前数据库中的表：{tables}")
+    except Exception as e:
+        print(f"创建数据库表时发生错误：{str(e)}")
+        raise
 
 def get_api_key(provider="deepseek"):
     """获取API密钥"""
@@ -89,6 +116,10 @@ def index():
     """首页"""
     return render_template('index.html')
 
+@app.route('/history')
+def history():
+    return render_template('history.html')
+
 # 添加一个路由以便在开发过程中重新加载静态文件
 @app.route('/static/<path:filename>')
 def serve_static(filename):
@@ -117,6 +148,22 @@ def debate():
         if stream:
             return jsonify({'error': '流式输出请使用 /api/debate/stream 端点'}), 400
 
+        print(f"开始新的辩论，主题：{topic}")
+        
+        # 创建新的会话记录
+        session = Session(
+            session_type='debate',
+            topic=topic,
+            settings={
+                'rounds': rounds,
+                'provider': provider,
+                'model': model
+            }
+        )
+        db.session.add(session)
+        db.session.commit()
+        print(f"创建新会话成功，ID：{session.id}")
+
         api_key = get_api_key(provider)
         debater_1 = create_debater("正方", "支持", provider, model, api_key)
         debater_2 = create_debater("反方", "反对", provider, model, api_key)
@@ -124,70 +171,129 @@ def debate():
         debate_history = []
         current_message = topic
 
+        # 保存主题消息
+        topic_message = Message(
+            session_id=session.id,
+            role='topic',
+            content=topic,
+            meta_info={
+                'round': 0,
+                'provider': provider,
+                'model': model
+            }
+        )
+        db.session.add(topic_message)
+        print("保存主题消息成功")
+
         # 多轮辩论
         for round in range(rounds):
+            print(f"开始第 {round + 1} 轮辩论")
+            
             # 正方发言
             try:
                 response_1 = debater_1.generate_response(current_message)
+                print(f"正方生成回应成功，长度：{len(response_1)}")
+                
                 debate_history.append({
                     'round': round + 1,
                     'side': '正方',
                     'content': response_1
                 })
+                
+                # 保存正方消息
+                message_1 = Message(
+                    session_id=session.id,
+                    role='正方',
+                    content=response_1,
+                    meta_info={
+                        'round': round + 1,
+                        'provider': provider,
+                        'model': model
+                    }
+                )
+                db.session.add(message_1)
+                print("保存正方消息成功")
+                
                 time.sleep(DEFAULT_CONFIG["delay"])
             except Exception as e:
+                print(f"正方发言时发生错误：{str(e)}")
                 return jsonify({'error': f'正方发言时发生错误：{str(e)}'}), 500
 
             # 反方发言
             try:
                 response_2 = debater_2.generate_response(response_1)
+                print(f"反方生成回应成功，长度：{len(response_2)}")
+                
                 debate_history.append({
                     'round': round + 1,
                     'side': '反方',
                     'content': response_2
                 })
+                
+                # 保存反方消息
+                message_2 = Message(
+                    session_id=session.id,
+                    role='反方',
+                    content=response_2,
+                    meta_info={
+                        'round': round + 1,
+                        'provider': provider,
+                        'model': model
+                    }
+                )
+                db.session.add(message_2)
+                print("保存反方消息成功")
+                
                 time.sleep(DEFAULT_CONFIG["delay"])
             except Exception as e:
+                print(f"反方发言时发生错误：{str(e)}")
                 return jsonify({'error': f'反方发言时发生错误：{str(e)}'}), 500
 
             current_message = response_2
 
+        # 提交所有数据库更改
+        db.session.commit()
+        print("所有消息保存成功")
+
         return jsonify({
             'topic': topic,
             'rounds': rounds,
-            'debate_history': debate_history
+            'debate_history': debate_history,
+            'session_id': session.id
         })
 
     except Exception as e:
+        print(f"辩论过程中发生错误：{str(e)}")
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/debate/init', methods=['POST'])
 def init_debate():
-    """初始化辩论设置"""
-    try:
-        data = request.json
-        topic = data.get('topic')
-        rounds = data.get('rounds', DEFAULT_CONFIG["rounds"])
-        provider = data.get('provider', DEFAULT_CONFIG["provider"])  # 新增
-        model = data.get('model', DEFAULT_CONFIG["model"])  # 新增
-        
-        if not topic:
-            return jsonify({'error': '请提供辩论主题'}), 400
-            
-        # 验证API密钥可用
-        api_key = get_api_key(provider)
-        
-        return jsonify({
-            'status': 'success',
-            'message': '辩论初始化成功',
-            'topic': topic,
+    """初始化辩论并创建会话记录"""
+    data = request.get_json()
+    topic = data.get('topic')
+    rounds = data.get('rounds', 3)
+    provider = data.get('provider', 'deepseek')
+    model = data.get('model', 'deepseek-chat')
+    
+    # 创建新的会话记录
+    session = Session(
+        session_type='debate',
+        topic=topic,
+        settings={
             'rounds': rounds,
             'provider': provider,
             'model': model
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e), 'message': '初始化辩论失败'}), 500
+        }
+    )
+    db.session.add(session)
+    db.session.commit()
+    
+    return jsonify({
+        'session_id': session.id,
+        'topic': topic,
+        'rounds': rounds
+    })
 
 @app.route('/api/debate/stream')
 def stream_debate():
@@ -202,6 +308,35 @@ def stream_debate():
     
     def generate():
         try:
+            # 创建新的会话记录
+            session = Session(
+                session_type='debate',
+                topic=topic,
+                settings={
+                    'rounds': rounds,
+                    'provider': provider,
+                    'model': model
+                }
+            )
+            db.session.add(session)
+            db.session.commit()
+            print(f"创建新会话成功，ID：{session.id}")
+            
+            # 保存主题消息
+            topic_message = Message(
+                session_id=session.id,
+                role='topic',
+                content=topic,
+                meta_info={
+                    'round': 0,
+                    'provider': provider,
+                    'model': model
+                }
+            )
+            db.session.add(topic_message)
+            db.session.commit()
+            print("保存主题消息成功")
+            
             api_key = get_api_key(provider)
             positive_debater = create_debater("正方", "支持", provider, model, api_key)
             negative_debater = create_debater("反方", "反对", provider, model, api_key)
@@ -218,6 +353,21 @@ def stream_debate():
                     yield f'data: {json.dumps({"type": "content", "round": round_num, "side": "正方", "content": full_positive_response})}\n\n'
                     time.sleep(0.05)  # 控制输出速度，避免前端刷新过快
                 
+                # 保存正方消息
+                message_1 = Message(
+                    session_id=session.id,
+                    role='正方',
+                    content=full_positive_response,
+                    meta_info={
+                        'round': round_num,
+                        'provider': provider,
+                        'model': model
+                    }
+                )
+                db.session.add(message_1)
+                db.session.commit()
+                print(f"保存第 {round_num} 轮正方消息成功")
+                
                 # 更新当前消息为正方回应
                 current_message = full_positive_response
                 
@@ -227,6 +377,21 @@ def stream_debate():
                     full_negative_response += chunk
                     yield f'data: {json.dumps({"type": "content", "round": round_num, "side": "反方", "content": full_negative_response})}\n\n'
                     time.sleep(0.05)  # 控制输出速度
+                
+                # 保存反方消息
+                message_2 = Message(
+                    session_id=session.id,
+                    role='反方',
+                    content=full_negative_response,
+                    meta_info={
+                        'round': round_num,
+                        'provider': provider,
+                        'model': model
+                    }
+                )
+                db.session.add(message_2)
+                db.session.commit()
+                print(f"保存第 {round_num} 轮反方消息成功")
                 
                 # 更新当前消息为反方回应
                 current_message = full_negative_response
@@ -239,6 +404,8 @@ def stream_debate():
             print(f"流式辩论错误: {error_msg}")
             yield f'event: error\ndata: {json.dumps({"type": "error", "message": error_msg})}\n\n'
             yield f'event: debate_complete\ndata: {json.dumps({"type": "complete", "message": "辩论因错误而终止"})}\n\n'
+            if 'session' in locals():
+                db.session.rollback()
     
     # 返回流式响应
     return Response(stream_with_context(generate()), mimetype="text/event-stream")
@@ -251,8 +418,9 @@ def single_debate():
         topic = data.get('topic')  # 当前的辩论主题或上一轮的回应
         side = data.get('side')    # 正方或反方
         round_num = data.get('round', 1)  # 当前轮次
-        provider = data.get('provider', DEFAULT_CONFIG["provider"])  # 新增
-        model = data.get('model', DEFAULT_CONFIG["model"])  # 新增
+        provider = data.get('provider', DEFAULT_CONFIG["provider"])
+        model = data.get('model', DEFAULT_CONFIG["model"])
+        session_id = data.get('session_id')  # 从请求中获取会话ID
         
         if not topic or not side:
             return jsonify({'error': '请提供辩论主题和辩论方'}), 400
@@ -272,6 +440,21 @@ def single_debate():
         # 生成回应
         response_content = debater.generate_response(topic)
         
+        # 保存消息到数据库
+        if session_id:
+            message = Message(
+                session_id=session_id,
+                role=side,
+                content=response_content,
+                meta_info={
+                    'round': round_num,
+                    'provider': provider,
+                    'model': model
+                }
+            )
+            db.session.add(message)
+            db.session.commit()
+        
         # 返回生成的内容
         return jsonify({
             'side': side,
@@ -282,6 +465,108 @@ def single_debate():
     except Exception as e:
         print(f"单次辩论错误: {str(e)}")
         return jsonify({'error': f'{side}生成回应时发生错误：{str(e)}'}), 500
+
+# 新增：会话管理API
+@app.route('/api/sessions', methods=['GET'])
+def list_sessions():
+    """获取会话列表"""
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    session_type = request.args.get('type')
+    
+    query = Session.query
+    if session_type:
+        query = query.filter_by(session_type=session_type)
+    
+    sessions = query.order_by(Session.updated_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    
+    return jsonify({
+        'total': sessions.total,
+        'pages': sessions.pages,
+        'current_page': sessions.page,
+        'sessions': [session.to_dict() for session in sessions.items]
+    })
+
+@app.route('/api/sessions/<int:session_id>', methods=['GET'])
+def get_session(session_id):
+    """获取单个会话详情"""
+    session = Session.query.get_or_404(session_id)
+    return jsonify(session.to_dict())
+
+@app.route('/api/sessions/<int:session_id>/export', methods=['GET'])
+def export_session(session_id):
+    """导出会话内容"""
+    session = Session.query.get_or_404(session_id)
+    format_type = request.args.get('format', 'json')
+    
+    if format_type == 'json':
+        return jsonify(session.to_dict())
+    elif format_type == 'markdown':
+        # 生成Markdown格式
+        markdown_content = f"# {session.topic}\n\n"
+        markdown_content += f"会话类型: {session.session_type}\n"
+        markdown_content += f"创建时间: {session.created_at}\n\n"
+        
+        for msg in session.messages:
+            markdown_content += f"## {msg.role}\n\n{msg.content}\n\n"
+        
+        return Response(
+            markdown_content,
+            mimetype='text/markdown',
+            headers={"Content-disposition": f"attachment; filename=session_{session_id}.md"}
+        )
+    else:
+        return jsonify({"error": "Unsupported format"}), 400
+
+@app.route('/api/history')
+def get_history():
+    """获取辩论历史记录"""
+    try:
+        print("正在获取历史记录...")
+        # 直接从 Session 表查询
+        sessions = Session.query.order_by(Session.created_at.desc()).all()
+        
+        print(f"查询到 {len(sessions)} 个会话")
+        
+        history = []
+        for session in sessions:
+            # 获取该会话的消息数量
+            message_count = Message.query.filter_by(session_id=session.id).count()
+            
+            history.append({
+                'session_id': session.id,
+                'topic': session.topic,  # 直接使用 session 的 topic 字段
+                'start_time': session.created_at.isoformat(),
+                'message_count': message_count
+            })
+        
+        print(f"返回 {len(history)} 条历史记录")
+        return jsonify({'history': history})
+        
+    except Exception as e:
+        print(f"获取历史记录错误: {str(e)}")
+        return jsonify({'error': f'获取历史记录时发生错误：{str(e)}'}), 500
+
+@app.route('/api/history/<session_id>')
+def get_session_detail(session_id):
+    """获取特定会话的详细记录"""
+    try:
+        print(f"正在获取会话 {session_id} 的详情...")
+        messages = Message.query.filter_by(
+            session_id=session_id
+        ).order_by(Message.created_at).all()
+        
+        print(f"查询到 {len(messages)} 条消息")
+        return jsonify({
+            'session_id': session_id,
+            'messages': [msg.to_dict() for msg in messages]
+        })
+        
+    except Exception as e:
+        print(f"获取会话详情错误: {str(e)}")
+        return jsonify({'error': f'获取会话详情时发生错误：{str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True) 
