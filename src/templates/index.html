@@ -18,7 +18,10 @@
             <div class="flex justify-between items-center py-4">
                 <a href="/" class="text-2xl font-bold title-gradient">AIgument</a>
                 <div class="flex space-x-4">
-                    <a href="/history" class="text-gray-600 hover:text-gray-900 transition-colors">
+                    <a href="/history" class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                        </svg>
                         历史记录
                     </a>
                 </div>
@@ -32,7 +35,7 @@
             <p class="text-gray-600 mb-8 text-lg mt-5">人工智能交互平台</p>
         </div>
         
-        <div class="max-w-4xl mx-auto card p-6 animate__animated animate__fadeInUp">
+        <div class="max-w-5xl mx-auto card p-6 animate__animated animate__fadeInUp">
             <!-- 模式选择器 -->
             <div class="mode-selector mb-6">
                 <div class="mode-option active" data-mode="debate">辩论模式</div>
@@ -52,7 +55,7 @@
                 <label class="block text-gray-700 text-sm font-bold mb-2">轮次设置</label>
                 <div class="flex items-center">
                     <span class="text-gray-600 mr-2">轮次:</span>
-                    <select id="rounds" class="rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <select id="rounds" class="w-32 rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
                         <option value="1">1轮</option>
                         <option value="2">2轮</option>
                         <option value="3" selected>3轮</option>

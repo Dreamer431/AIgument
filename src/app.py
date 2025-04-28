@@ -522,12 +522,19 @@ def export_session(session_id):
 
 @app.route('/api/history')
 def get_history():
-    """获取辩论历史记录"""
     try:
         print("正在获取历史记录...")
-        # 直接从 Session 表查询
-        sessions = Session.query.order_by(Session.created_at.desc()).all()
+        # 获取类型参数
+        session_type = request.args.get('type', 'all')
+        print(f"请求的会话类型: {session_type}")
         
+        # 构建查询
+        query = Session.query
+        if session_type and session_type != 'all':
+            query = query.filter_by(session_type=session_type)
+            
+        # 执行查询
+        sessions = query.order_by(Session.created_at.desc()).all()
         print(f"查询到 {len(sessions)} 个会话")
         
         history = []
@@ -537,9 +544,10 @@ def get_history():
             
             history.append({
                 'session_id': session.id,
-                'topic': session.topic,  # 直接使用 session 的 topic 字段
+                'topic': session.topic,
                 'start_time': session.created_at.isoformat(),
-                'message_count': message_count
+                'message_count': message_count,
+                'type': session.session_type  # 添加类型信息
             })
         
         print(f"返回 {len(history)} 条历史记录")
@@ -567,6 +575,81 @@ def get_session_detail(session_id):
     except Exception as e:
         print(f"获取会话详情错误: {str(e)}")
         return jsonify({'error': f'获取会话详情时发生错误：{str(e)}'}), 500
+
+@app.route('/api/history/<session_id>', methods=['DELETE'])
+def delete_session(session_id):
+    try:
+        print(f"正在删除会话 {session_id}...")
+        # 先删除该会话的所有消息
+        Message.query.filter_by(session_id=session_id).delete()
+        # 再删除会话本身
+        session = Session.query.get(session_id)
+        if session:
+            db.session.delete(session)
+            db.session.commit()
+            print(f"会话 {session_id} 删除成功")
+            return jsonify({'success': True, 'message': '删除成功'})
+        else:
+            print(f"未找到会话 {session_id}")
+            return jsonify({'success': False, 'message': '会话不存在'}), 404
+    except Exception as e:
+        print(f"删除会话失败: {str(e)}")
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'删除失败: {str(e)}'}), 500
+
+@app.route('/api/history/<session_id>/export')
+def export_history_session(session_id):
+    try:
+        print(f"正在导出会话 {session_id}...")
+        format_type = request.args.get('format', 'json')
+        
+        # 获取会话和消息
+        session = Session.query.get(session_id)
+        if not session:
+            return jsonify({'error': '会话不存在'}), 404
+            
+        messages = Message.query.filter_by(session_id=session_id).order_by(Message.created_at).all()
+        
+        if format_type == 'json':
+            # 构建 JSON 格式的数据
+            data = {
+                'session_id': session.id,
+                'topic': session.topic,
+                'start_time': session.created_at.isoformat(),
+                'messages': [{
+                    'role': msg.role,
+                    'content': msg.content,
+                    'created_at': msg.created_at.isoformat()
+                } for msg in messages]
+            }
+            return jsonify(data)
+            
+        elif format_type == 'markdown':
+            # 构建 Markdown 格式的内容
+            markdown_content = f"# {session.topic}\n\n"
+            markdown_content += f"会话ID: {session.id}\n"
+            markdown_content += f"开始时间: {session.created_at.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+            
+            for msg in messages:
+                markdown_content += f"## {msg.role}\n\n"
+                markdown_content += f"{msg.content}\n\n"
+                markdown_content += f"时间: {msg.created_at.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+                markdown_content += "---\n\n"
+            
+            return Response(
+                markdown_content,
+                mimetype='text/markdown',
+                headers={
+                    'Content-Disposition': f'attachment; filename=session_{session_id}.md'
+                }
+            )
+            
+        else:
+            return jsonify({'error': '不支持的导出格式'}), 400
+            
+    except Exception as e:
+        print(f"导出会话失败: {str(e)}")
+        return jsonify({'error': f'导出失败: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True) 

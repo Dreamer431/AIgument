@@ -8,6 +8,10 @@ let currentType = 'all';
 let totalPages = 1;
 let currentSessionId = null;
 
+// 删除会话相关的变量
+let sessionToDelete = null;
+const deleteConfirmModal = document.getElementById('delete-confirm-modal');
+
 // 获取DOM元素
 const sessionsContainer = document.getElementById('sessions-container');
 const sessionModal = document.getElementById('session-modal');
@@ -63,6 +67,7 @@ async function loadSessions() {
             url += `&type=${currentType}`;
         }
         
+        console.log('正在请求:', url);
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error('获取历史记录失败');
@@ -71,7 +76,8 @@ async function loadSessions() {
         const data = await response.json();
         
         // 更新分页信息
-        totalPages = Math.ceil(data.history.length / 10);
+        const totalItems = data.history.length;
+        totalPages = Math.max(1, Math.ceil(totalItems / 10));  // 确保至少有1页
         updatePagination();
         
         // 清空容器
@@ -118,6 +124,10 @@ function createSessionCard(session) {
                         class="px-4 py-2 rounded bg-blue-500 text-white text-sm">
                     查看详情
                 </button>
+                <button onclick="deleteSession('${session.session_id}')" 
+                        class="px-4 py-2 rounded bg-red-500 text-white text-sm">
+                    删除
+                </button>
             </div>
         </div>
     `;
@@ -127,9 +137,20 @@ function createSessionCard(session) {
 
 // 更新分页控制
 function updatePagination() {
-    document.getElementById('page-info').textContent = `第 ${currentPage} / ${totalPages} 页`;
-    document.getElementById('prev-page').disabled = currentPage <= 1;
-    document.getElementById('next-page').disabled = currentPage >= totalPages;
+    const pageInfo = document.getElementById('page-info');
+    const prevButton = document.getElementById('prev-page');
+    const nextButton = document.getElementById('next-page');
+    
+    // 更新页码显示
+    pageInfo.textContent = `第 ${currentPage} / ${totalPages} 页`;
+    
+    // 更新按钮状态
+    prevButton.disabled = currentPage <= 1;
+    nextButton.disabled = currentPage >= totalPages;
+    
+    // 更新按钮样式
+    prevButton.classList.toggle('opacity-50', currentPage <= 1);
+    nextButton.classList.toggle('opacity-50', currentPage >= totalPages);
 }
 
 // 查看会话详情
@@ -225,7 +246,48 @@ async function exportSession(format) {
         }
     } catch (error) {
         console.error('导出失败:', error);
-        alert('导出失败，请重试');
+        alert('导出失败：' + error.message);
+    }
+}
+
+// 显示删除确认对话框
+function deleteSession(sessionId) {
+    sessionToDelete = sessionId;
+    deleteConfirmModal.classList.remove('hidden');
+}
+
+// 关闭删除确认对话框
+function closeDeleteConfirm() {
+    deleteConfirmModal.classList.add('hidden');
+    sessionToDelete = null;
+}
+
+// 确认删除
+async function confirmDelete() {
+    if (!sessionToDelete) return;
+    
+    try {
+        const response = await fetch(`/api/history/${sessionToDelete}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // 删除成功，重新加载会话列表
+            loadSessions();
+            // 如果当前正在查看被删除的会话，关闭详情模态框
+            if (currentSessionId === sessionToDelete) {
+                closeModal();
+            }
+        } else {
+            alert('删除失败：' + data.message);
+        }
+    } catch (error) {
+        console.error('删除会话失败:', error);
+        alert('删除失败，请重试');
+    } finally {
+        closeDeleteConfirm();
     }
 }
 
@@ -233,6 +295,9 @@ async function exportSession(format) {
 window.onclick = function(event) {
     if (event.target == sessionModal) {
         closeModal();
+    }
+    if (event.target == deleteConfirmModal) {
+        closeDeleteConfirm();
     }
 }
 
