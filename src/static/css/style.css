@@ -284,4 +284,162 @@ select:focus {
     outline: none;
     box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5);
     border-color: #63b3ed;
+}
+
+/* 历史记录相关样式 */
+.session-type-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    color: #4B5563;
+    transition: color 0.3s;
+}
+
+.session-type-btn:hover {
+    color: #111827;
+}
+
+.session-type-btn.active {
+    background-color: #3B82F6;
+    color: white;
+}
+
+.btn-secondary {
+    padding: 0.5rem 1rem;
+    background-color: #F3F4F6;
+    color: #374151;
+    border-radius: 0.5rem;
+    transition: all 0.3s;
+    outline: none;
+}
+
+.btn-secondary:hover {
+    background-color: #E5E7EB;
+}
+
+.btn-secondary:focus {
+    box-shadow: 0 0 0 2px rgba(156, 163, 175, 0.5);
+}
+
+.btn-secondary:disabled {
+    opacity: 0.5;
+}
+
+/* 历史记录页面样式 */
+.history-list {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.history-item {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.history-item h3 {
+    margin: 0 0 10px;
+    font-size: 1.2em;
+    color: #333;
+}
+
+.history-item p {
+    margin: 5px 0;
+    color: #666;
+}
+
+.view-detail-btn {
+    background: #4a90e2;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.view-detail-btn:hover {
+    background: #357abd;
+}
+
+/* 模态框样式 */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 5% auto;
+    padding: 20px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: #000;
+}
+
+/* 消息样式 */
+.message {
+    margin: 15px 0;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.message.正方 {
+    background: #e3f2fd;
+    margin-right: 20%;
+}
+
+.message.反方 {
+    background: #fce4ec;
+    margin-left: 20%;
+}
+
+.message-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.message-content {
+    white-space: pre-wrap;
+    line-height: 1.5;
+}
+
+/* 加载和错误提示 */
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+.error {
+    color: #d32f2f;
+    text-align: center;
+    padding: 20px;
+    background: #ffebee;
+    border-radius: 8px;
 } 

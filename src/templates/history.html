@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>辩论历史记录 - AIgument</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8">辩论历史记录</h1>
+        
+        <!-- 类型切换按钮 -->
+        <div class="mb-6 flex space-x-4">
+            <button class="session-type-btn active px-4 py-2 rounded bg-blue-500 text-white" data-type="all">全部</button>
+            <button class="session-type-btn px-4 py-2 rounded bg-gray-200" data-type="debate">辩论</button>
+            <button class="session-type-btn px-4 py-2 rounded bg-gray-200" data-type="chat">对话</button>
+            <button class="session-type-btn px-4 py-2 rounded bg-gray-200" data-type="qa">问答</button>
+        </div>
+        
+        <!-- 会话列表容器 -->
+        <div id="sessions-container" class="space-y-4">
+            <div class="text-center py-8">加载中...</div>
+        </div>
+        
+        <!-- 分页控制 -->
+        <div class="mt-8 flex justify-center items-center space-x-4">
+            <button id="prev-page" class="px-4 py-2 rounded bg-gray-200 disabled:opacity-50">上一页</button>
+            <span id="page-info" class="text-gray-600">第 1 / 1 页</span>
+            <button id="next-page" class="px-4 py-2 rounded bg-gray-200 disabled:opacity-50">下一页</button>
+        </div>
+        
+        <!-- 会话详情模态框 -->
+        <div id="session-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden">
+            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg p-6 w-3/4 max-h-[80vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 id="modal-title" class="text-2xl font-bold"></h2>
+                    <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div id="modal-content" class="space-y-4"></div>
+                <div class="mt-6 flex justify-end space-x-4">
+                    <button onclick="exportSession('json')" class="px-4 py-2 rounded bg-blue-500 text-white">导出JSON</button>
+                    <button onclick="exportSession('markdown')" class="px-4 py-2 rounded bg-blue-500 text-white">导出Markdown</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/history.js"></script>
+</body>
+</html> 
