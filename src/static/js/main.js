@@ -22,6 +22,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // 初始化模型选择器
     initModelSelector();
     
+    // 同步轮次选择器
+    syncRoundSelectors();
+    
     // 绑定按钮事件
     document.getElementById('start-button').addEventListener('click', handleStartButtonClick);
     
@@ -31,6 +34,23 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('流式输出状态:', this.checked);
     });
 });
+
+// 同步轮次选择器
+function syncRoundSelectors() {
+    const debateRounds = document.getElementById('rounds');
+    const chatRounds = document.getElementById('chat-rounds');
+    
+    if (debateRounds && chatRounds) {
+        // 确保两个选择器有相同的选项
+        debateRounds.addEventListener('change', function() {
+            chatRounds.value = this.value;
+        });
+        
+        chatRounds.addEventListener('change', function() {
+            debateRounds.value = this.value;
+        });
+    }
+}
 
 // 初始化模型选择器
 function initModelSelector() {
@@ -96,20 +116,20 @@ function initModeSelector() {
         chatSettings.style.display = mode === 'chat' ? 'block' : 'none';
         qaSettings.style.display = mode === 'qa' ? 'block' : 'none';
         
-        // 更新按钮文本
+        // 更新按钮文本和图标
         const startButton = document.getElementById('start-button');
         if (mode === 'debate') {
-            startButton.textContent = '开始辩论';
+            startButton.innerHTML = '<i class="fas fa-play mr-2"></i>开始辩论';
             document.getElementById('topic-label').textContent = '辩论主题';
-            document.getElementById('topic').placeholder = '请输入辩论主题...';
+            document.getElementById('topic').placeholder = ' ';
         } else if (mode === 'chat') {
-            startButton.textContent = '开始对话';
+            startButton.innerHTML = '<i class="fas fa-comments mr-2"></i>开始对话';
             document.getElementById('topic-label').textContent = '对话主题';
-            document.getElementById('topic').placeholder = '请输入对话主题...';
+            document.getElementById('topic').placeholder = ' ';
         } else if (mode === 'qa') {
-            startButton.textContent = '提交问题';
+            startButton.innerHTML = '<i class="fas fa-question mr-2"></i>提交问题';
             document.getElementById('topic-label').textContent = '问题';
-            document.getElementById('topic').placeholder = '请输入您的问题...';
+            document.getElementById('topic').placeholder = ' ';
         }
     }
 }
@@ -122,6 +142,7 @@ async function handleStartButtonClick() {
     // 获取用户输入
     const topic = document.getElementById('topic').value.trim();
     if (!topic) {
+        showNotification('请输入内容', 'error');
         showError('请输入内容');
         return;
     }
@@ -131,7 +152,7 @@ async function handleStartButtonClick() {
     
     // 显示加载状态
     const startButton = document.getElementById('start-button');
-    const originalButtonText = startButton.textContent;
+    const originalButtonText = startButton.innerHTML;
     startButton.disabled = true;
     startButton.innerHTML = `
         <div class="flex items-center justify-center">
@@ -174,13 +195,18 @@ async function handleStartButtonClick() {
             
             await processQuestion(topic, style, historyContainer, provider, model);
         }
+        
+        // 显示成功通知
+        showNotification('处理完成！', 'success');
+        
     } catch (error) {
         console.error('处理请求失败:', error);
         showError(error.message || '发生错误，请重试');
+        showNotification('处理失败: ' + (error.message || '未知错误'), 'error');
     } finally {
         // 恢复按钮状态
         startButton.disabled = false;
-        startButton.textContent = originalButtonText;
+        startButton.innerHTML = originalButtonText;
     }
 }
 

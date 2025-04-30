@@ -58,7 +58,8 @@ aigument/
 ├── .gitignore          # Git忽略文件
 └── src/                # 源代码目录
     ├── app.py          # Flask应用主文件 (含API接口)
-    ├── main.py         # 入口文件
+    ├── models.py       # 数据库模型定义
+    ├── check_db.py     # 数据库检查工具
     ├── agents/         # AI代理模块
     │   └── debater.py  # 辩论者类实现 (支持流式输出)
     ├── static/         # 静态资源文件
@@ -69,9 +70,13 @@ aigument/
     │       ├── debate.js   # 辩论模式功能
     │       ├── chat.js     # 对话模式功能
     │       ├── qa.js       # 问答模式功能
+    │       ├── history.js  # 历史记录功能
     │       └── utils.js    # 工具函数
-    └── templates/      # HTML模板
-        └── index.html  # 主页面模板
+    ├── templates/      # HTML模板
+    │   ├── index.html    # 主页面模板
+    │   └── history.html  # 历史记录页面
+    └── instance/       # 数据库实例目录
+        └── aigument.db   # SQLite数据库文件
 ```
 
 ## 安装和运行
@@ -80,59 +85,3 @@ aigument/
 ```bash
 pip install -r requirements.txt
 ```
-
-2. 配置环境变量：
-在`.env`文件中设置：
-```
-DEEPSEEK_API_KEY=你的DeepSeek API密钥
-OPENAI_API_KEY=你的OpenAI API密钥（可选）
-```
-
-3. 运行应用：
-```bash
-cd src
-python app.py
-```
-
-4. 访问应用：
-打开浏览器访问 http://localhost:5000
-
-## 使用指南
-
-1. 选择交互模式：辩论模式、对话模式或问答模式
-2. 输入主题或问题
-3. 根据所选模式配置相应参数（轮次、角色、风格等）
-4. 选择服务提供商和模型
-5. 选择是否启用流式输出
-6. 点击相应按钮开始交互
-7. 查看生成的内容，支持Markdown格式显示
-8. 在终端控制台可查看详细的API交互过程和完整模型输出
-
-## 系统要求
-
-- Python 3.8+
-- 现代浏览器（支持SSE和ES6）
-- DeepSeek或OpenAI API访问权限
-
-## 最近更新
-
-- 增强了终端日志输出系统，可实时查看完整的模型输出内容
-- 改进流式输出在终端的实时显示效果
-- 添加了多模式交互功能（辩论、对话、问答）
-- 重构前端代码，实现HTML、CSS和JavaScript的分离
-- 优化用户界面，增强视觉效果和用户体验
-- 修复流式输出切换按钮和加载动画
-- 改进非流式模式下的内容展示逻辑
-
-## 许可证
-
-本项目采用Apache License 2.0许可证。详情请参见[LICENSE](LICENSE)文件。
-
-## 贡献
-
-欢迎提交问题和改进建议。如果您想为项目做出贡献，请遵循以下步骤：
-1. Fork 项目
-2. 创建您的特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交您的更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开一个 Pull Request
