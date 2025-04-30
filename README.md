@@ -27,6 +27,7 @@
   - 响应式设计，适配桌面和移动设备
   - 动画效果增强用户体验
   - 清晰的视觉层次和交互反馈
+  - 深色模式支持
 
 - **强化日志系统**：
   - 终端控制台显示详细的API请求和响应信息
@@ -65,13 +66,15 @@ aigument/
     ├── static/         # 静态资源文件
     │   ├── css/        # CSS样式
     │   │   └── style.css   # 主要样式文件
-    │   └── js/         # JavaScript文件
-    │       ├── main.js     # 主要JS逻辑
-    │       ├── debate.js   # 辩论模式功能
-    │       ├── chat.js     # 对话模式功能
-    │       ├── qa.js       # 问答模式功能
-    │       ├── history.js  # 历史记录功能
-    │       └── utils.js    # 工具函数
+    │   ├── js/         # JavaScript文件
+    │   │   ├── main.js     # 主要JS逻辑
+    │   │   ├── debate.js   # 辩论模式功能
+    │   │   ├── chat.js     # 对话模式功能
+    │   │   ├── qa.js       # 问答模式功能
+    │   │   ├── history.js  # 历史记录功能
+    │   │   ├── ui.js       # UI交互和动画
+    │   │   └── utils.js    # 工具函数
+    │   └── img/        # 图片资源
     ├── templates/      # HTML模板
     │   ├── index.html    # 主页面模板
     │   └── history.html  # 历史记录页面
@@ -81,7 +84,170 @@ aigument/
 
 ## 安装和运行
 
-1. 安装依赖：
+1. 克隆仓库：
+```bash
+git clone https://github.com/yourusername/aigument.git
+cd aigument
+```
+
+2. 创建并激活虚拟环境(可选)：
+```bash
+# 使用venv
+python -m venv venv
+# Windows激活
+venv\Scripts\activate
+# Linux/Mac激活
+source venv/bin/activate
+```
+
+3. 安装依赖：
 ```bash
 pip install -r requirements.txt
 ```
+
+4. 配置环境变量：
+创建`.env`文件并添加以下内容：
+```
+DEEPSEEK_API_KEY=your_deepseek_api_key
+OPENAI_API_KEY=your_openai_api_key
+DEEPSEEK_API_BASE=https://api.deepseek.com/v1
+```
+
+5. 运行应用：
+```bash
+cd src
+python app.py
+```
+
+6. 打开浏览器访问：http://127.0.0.1:5000
+
+## 使用说明
+
+### 辩论模式
+
+1. 选择"辩论模式"
+2. 输入辩论主题，如"人工智能是否会超越人类智能"
+3. 设置辩论轮次（1-5轮）
+4. 选择是否开启流式输出
+5. 选择模型提供商和具体模型
+6. 点击"开始辩论"
+7. 系统将生成正反双方的辩论内容
+
+### 对话模式
+
+1. 选择"AI对话模式"
+2. 输入对话主题
+3. 选择两个角色（如科学家和哲学家）
+4. 设置对话轮次
+5. 点击"开始对话"
+6. 系统将生成两个角色间的对话内容
+
+### 问答模式
+
+1. 选择"问答模式"
+2. 输入您的问题
+3. 选择回答风格（详细分析、简洁直接或苏格拉底式）
+4. 点击"提交问题"
+5. 系统将根据选择的风格生成回答
+
+## API文档
+
+AIgument提供了以下API接口：
+
+### 辩论API
+
+#### 初始化辩论
+- **端点**: `/api/debate/init`
+- **方法**: POST
+- **参数**:
+  - `topic` (必填): 辩论主题
+  - `rounds`: 辩论轮次，默认为3
+  - `provider`: 模型提供商，默认为'deepseek'
+  - `model`: 模型名称，默认为'deepseek-chat'
+- **返回**: 会话ID和设置信息
+
+#### 流式辩论
+- **端点**: `/api/debate/stream`
+- **方法**: GET
+- **参数**:
+  - `topic` (必填): 辩论主题
+  - `rounds`: 辩论轮次，默认为3
+  - `provider`: 模型提供商
+  - `model`: 模型名称
+- **返回**: Server-Sent Events流式内容
+
+#### 单次辩论
+- **端点**: `/api/debate/single`
+- **方法**: POST
+- **参数**:
+  - `topic` (必填): 主题或上一轮回应
+  - `side` (必填): '正方'或'反方'
+  - `round`: 当前轮次，默认为1
+  - `provider`: 模型提供商
+  - `model`: 模型名称
+  - `session_id`: 会话ID
+- **返回**: 生成的单轮辩论内容
+
+### 历史记录API
+
+#### 获取历史列表
+- **端点**: `/api/history`
+- **方法**: GET
+- **参数**:
+  - `type`: 会话类型（'all', 'debate', 'chat', 'qa'）
+- **返回**: 历史会话列表
+
+#### 获取会话详情
+- **端点**: `/api/history/<session_id>`
+- **方法**: GET
+- **返回**: 特定会话的详细消息内容
+
+#### 导出会话
+- **端点**: `/api/history/<session_id>/export`
+- **方法**: GET
+- **参数**:
+  - `format`: 导出格式（'json'或'markdown'）
+- **返回**: 导出的会话内容
+
+#### 删除会话
+- **端点**: `/api/history/<session_id>`
+- **方法**: DELETE
+- **返回**: 操作结果
+
+## 后续开发计划
+
+1. **功能扩展**：
+   - 多语言支持
+   - 语音输入和输出
+   - 更多自定义角色和模板
+
+2. **技术提升**：
+   - 增加更多模型和提供商支持
+   - 改进流式输出性能
+   - 添加更多数据可视化功能
+
+3. **用户体验**：
+   - 保存用户偏好设置
+   - 增加更多主题样式
+   - 支持更丰富的导出功能
+
+## 贡献指南
+
+我们欢迎各种形式的贡献，包括但不限于：
+
+1. 提交Bug报告
+2. 提出新功能建议
+3. 添加或改进文档
+4. 提交代码改进和新功能
+
+**贡献步骤**：
+
+1. Fork项目
+2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
+3. 提交更改 (`git commit -m 'Add some amazing feature'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 提交Pull Request
+
+## 许可证
+
+本项目采用Apache 2.0许可证。详情请参阅[LICENSE](LICENSE)文件。
