@@ -34,7 +34,7 @@ class Debater:
             if provider == "deepseek":
                 self.client = OpenAI(
                     api_key=api_key or os.getenv("DEEPSEEK_API_KEY"),
-                    base_url="https://api.deepseek.com/v1"
+                    base_url=os.getenv("DEEPSEEK_API_BASE", "https://api.deepseek.com/v1")
                 )
             elif provider == "openai":
                 self.client = OpenAI(

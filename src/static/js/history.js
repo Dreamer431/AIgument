@@ -158,7 +158,7 @@ function updatePagination() {
 async function viewSessionDetail(sessionId) {
     try {
         currentSessionId = sessionId;
-        const response = await fetch(`/api/history/${sessionId}`);
+        const response = await fetch(`/api/history/${Number(sessionId)}`);
         if (!response.ok) {
             throw new Error('获取会话详情失败');
         }
@@ -217,7 +217,7 @@ async function exportSession(format) {
     if (!currentSessionId) return;
     
     try {
-        const response = await fetch(`/api/history/${currentSessionId}/export?format=${format}`);
+        const response = await fetch(`/api/history/${Number(currentSessionId)}/export?format=${format}`);
         if (!response.ok) {
             throw new Error('导出失败');
         }
@@ -270,7 +270,7 @@ async function confirmDelete() {
     if (!sessionToDelete) return;
     
     try {
-        const response = await fetch(`/api/history/${sessionToDelete}`, {
+        const response = await fetch(`/api/history/${Number(sessionToDelete)}`, {
             method: 'DELETE'
         });
         

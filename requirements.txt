@@ -3,3 +3,8 @@ python-dotenv==1.0.1
 rich==13.7.0
 requests==2.31.0
 openai==1.64.0
+Flask-SQLAlchemy
+Flask-Cors
+SQLAlchemy
+Flask-Migrate
+gunicorn
