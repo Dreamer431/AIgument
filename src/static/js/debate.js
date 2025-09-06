@@ -111,23 +111,6 @@ async function regularDebate(topic, rounds, historyContainer, provider = "deepse
 // 流式辩论
 async function streamDebate(topic, rounds, historyContainer, provider = "deepseek", model = "deepseek-chat") {
     try {
-        // 初始化辩论
-        const initResponse = await fetch('/api/debate/init', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ 
-                topic, 
-                rounds,
-                provider,
-                model
-            })
-        });
-        
-        if (!initResponse.ok) {
-            const errorData = await initResponse.json();
-            throw new Error(errorData.error || '初始化辩论失败');
-        }
-        
         // 创建轮次容器
         let roundContainers = {};
         for (let i = 1; i <= rounds; i++) {

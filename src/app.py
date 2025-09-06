@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, Response, stream_with_context, send_from_directory
+from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 from dotenv import load_dotenv
 import os
 import sys
@@ -7,9 +7,8 @@ from agents.debater import Debater
 import locale
 import json
 from flask_cors import CORS
-from datetime import datetime, timedelta
+from datetime import datetime
 from models import db, Session, Message
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect, func
 
 # 设置默认编码为UTF-8
@@ -566,7 +565,7 @@ def get_history():
         print(f"获取历史记录错误: {str(e)}")
         return jsonify({'error': f'获取历史记录时发生错误：{str(e)}'}), 500
 
-@app.route('/api/history/<session_id>')
+@app.route('/api/history/<int:session_id>')
 def get_session_detail(session_id):
     """获取特定会话的详细记录"""
     try:
@@ -585,7 +584,7 @@ def get_session_detail(session_id):
         print(f"获取会话详情错误: {str(e)}")
         return jsonify({'error': f'获取会话详情时发生错误：{str(e)}'}), 500
 
-@app.route('/api/history/<session_id>', methods=['DELETE'])
+@app.route('/api/history/<int:session_id>', methods=['DELETE'])
 def delete_session(session_id):
     try:
         print(f"正在删除会话 {session_id}...")
@@ -606,7 +605,7 @@ def delete_session(session_id):
         db.session.rollback()
         return jsonify({'success': False, 'message': f'删除失败: {str(e)}'}), 500
 
-@app.route('/api/history/<session_id>/export')
+@app.route('/api/history/<int:session_id>/export')
 def export_history_session(session_id):
     try:
         print(f"正在导出会话 {session_id}...")
