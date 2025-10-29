@@ -48,16 +48,15 @@ flask-caching==2.1.0       # 响应缓存
 ### 2. 数据库优化
 
 #### 索引优化
-```python
-# Session 表
-- idx_session_type          # 类型查询
-- idx_created_at            # 时间排序
-- idx_session_type_created  # 复合索引
 
-# Message 表
-- idx_session_id            # 会话查询
-- idx_session_created       # 会话+时间复合索引
-```
+**Session 表**：
+- `idx_session_type` - 类型查询优化
+- `idx_created_at` - 时间排序优化  
+- `idx_session_type_created` - 复合索引优化
+
+**Message 表**：
+- `idx_session_id` - 会话查询优化
+- `idx_session_created` - 会话+时间复合索引优化
 
 #### 连接池配置
 ```python
@@ -109,12 +108,11 @@ def validate_input(data, required_fields, optional_fields):
 ### 5. 错误处理
 
 #### API重试优化
-```python
-# 指数退避策略
-重试次数：3次
-等待时间：2秒 → 4秒 → 8秒
-成功率提升：85% → 95%
-```
+
+**指数退避策略**：
+- 最大重试次数：3次
+- 等待时间递增：2秒 → 4秒 → 8秒
+- 成功率提升：从 85% 提升到 95%
 
 #### 错误分类
 - 验证错误（400）
