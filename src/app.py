@@ -14,6 +14,11 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect, func
 from functools import wraps
 from performance import before_request, after_request, performance_monitor
+import logging
+
+# 配置日志
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # 设置默认编码为UTF-8
 if sys.stdout.encoding != 'utf-8':
@@ -92,6 +97,29 @@ with app.app_context():
     except Exception as e:
         print(f"创建数据库表时发生错误：{str(e)}")
         raise
+
+def safe_error_message(error, default_message="操作失败"):
+    """
+    安全地格式化错误消息，避免在生产环境泄露敏感信息
+    
+    Args:
+        error: 异常对象
+        default_message: 默认错误消息
+        
+    Returns:
+        安全的错误消息字符串
+    """
+    # 在开发环境返回详细错误，生产环境返回通用消息
+    if app.debug:
+        return str(error)
+    
+    # 对于已知的安全错误类型，可以返回消息
+    if isinstance(error, (ValueError, TypeError)):
+        return str(error)
+    
+    # 其他错误只返回通用消息，并记录到日志
+    logger.error(f"Error occurred: {str(error)}", exc_info=True)
+    return default_message
 
 def get_api_key(provider="deepseek"):
     """获取API密钥"""
@@ -416,9 +444,9 @@ def init_debate():
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:
-        print(f"初始化辩论错误: {str(e)}")
+        logger.error(f"初始化辩论错误: {str(e)}", exc_info=True)
         db.session.rollback()
-        return jsonify({'error': '初始化辩论失败'}), 500
+        return jsonify({'error': safe_error_message(e, '初始化辩论失败')}), 500
 
 @app.route('/api/debate/stream')
 def stream_debate():
@@ -443,7 +471,8 @@ def stream_debate():
         model = request.args.get('model', DEFAULT_CONFIG["model"])[:100]
         
     except Exception as e:
-        return jsonify({'error': f'参数验证失败: {str(e)}'}), 400
+        logger.error(f"参数验证失败: {str(e)}", exc_info=True)
+        return jsonify({'error': '参数验证失败，请检查输入参数'}), 400
     
     def generate():
         try:
@@ -872,7 +901,8 @@ def get_stats():
             }
         })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"获取统计信息失败: {str(e)}", exc_info=True)
+        return jsonify({'error': safe_error_message(e, '获取统计信息失败')}), 500
 
 if __name__ == '__main__':
     app.run(debug=True) 
