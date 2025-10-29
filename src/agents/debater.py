@@ -78,7 +78,7 @@ class Debater:
             
             print(f"\n【当前需回应的完整消息】\n{opponent_message}\n")
             
-            # 调用API生成回应并添加错误捕获和重试机制
+            # 调用API生成回应并添加错误捕获和重试机制（使用指数退避）
             max_retries = 3
             retry_count = 0
             
@@ -120,7 +120,10 @@ class Debater:
                     if retry_count >= max_retries:
                         raise retry_error
                     import time
-                    time.sleep(1)  # 重试前稍微等待一段时间
+                    # 指数退避：等待时间随重试次数增加而增加
+                    wait_time = 2 ** retry_count  # 2, 4, 8 秒
+                    print(f"等待 {wait_time} 秒后重试...")
+                    time.sleep(wait_time)
             
         except Exception as e:
             print(f"\n{'='*50}")

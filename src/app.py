@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, send_from_directory
+from flask_caching import Cache
 from dotenv import load_dotenv
 import os
 import sys
@@ -11,6 +12,7 @@ from datetime import datetime, timedelta
 from models import db, Session, Message
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect, func
+from functools import wraps
 
 # 设置默认编码为UTF-8
 if sys.stdout.encoding != 'utf-8':
@@ -37,6 +39,12 @@ app = Flask(__name__,
 CORS(app)
 load_dotenv()
 
+# 配置缓存
+cache = Cache(app, config={
+    'CACHE_TYPE': 'SimpleCache',
+    'CACHE_DEFAULT_TIMEOUT': 300  # 5分钟缓存
+})
+
 # 配置
 DEFAULT_CONFIG = {
     "rounds": 3,
@@ -57,6 +65,11 @@ instance_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "i
 os.makedirs(instance_dir, exist_ok=True)
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(instance_dir, "aigument.db")}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 10,
+    'pool_recycle': 3600,
+    'pool_pre_ping': True,
+}
 
 # 初始化数据库
 db.init_app(app)
@@ -89,6 +102,69 @@ def get_api_key(provider="deepseek"):
         raise ValueError(f"不支持的提供商: {provider}")
     
     return api_key
+
+def validate_input(data, required_fields, optional_fields=None):
+    """验证输入数据
+    
+    Args:
+        data: 输入数据字典
+        required_fields: 必需字段字典 {field_name: (type, max_length)}
+        optional_fields: 可选字段字典 {field_name: (type, max_length, default)}
+    
+    Returns:
+        验证并清理后的数据字典
+        
+    Raises:
+        ValueError: 验证失败时抛出
+    """
+    if optional_fields is None:
+        optional_fields = {}
+    
+    result = {}
+    
+    # 检查必需字段
+    for field, (field_type, max_length) in required_fields.items():
+        if field not in data or data[field] is None:
+            raise ValueError(f"缺少必需字段: {field}")
+        
+        value = data[field]
+        
+        # 类型检查
+        if not isinstance(value, field_type):
+            raise ValueError(f"字段 {field} 类型错误，期望 {field_type.__name__}")
+        
+        # 长度检查（针对字符串）
+        if field_type == str and max_length and len(value) > max_length:
+            raise ValueError(f"字段 {field} 超过最大长度 {max_length}")
+        
+        # 字符串去除首尾空格
+        if field_type == str:
+            value = value.strip()
+            if not value:
+                raise ValueError(f"字段 {field} 不能为空")
+        
+        result[field] = value
+    
+    # 处理可选字段
+    for field, (field_type, max_length, default) in optional_fields.items():
+        value = data.get(field, default)
+        
+        if value is not None:
+            # 类型检查
+            if not isinstance(value, field_type):
+                value = default
+            
+            # 长度检查（针对字符串）
+            if field_type == str and max_length and len(value) > max_length:
+                value = value[:max_length]
+            
+            # 字符串去除首尾空格
+            if field_type == str and value:
+                value = value.strip()
+        
+        result[field] = value
+    
+    return result
 
 def create_debater(name, position, provider, model, api_key):
     """创建辩论者实例"""
@@ -138,15 +214,31 @@ def serve_static(filename):
 def debate():
     try:
         data = request.json
-        topic = data.get('topic')
-        rounds = data.get('rounds', DEFAULT_CONFIG["rounds"])
-        stream = data.get('stream', False)  # 添加流式参数支持
-        provider = data.get('provider', DEFAULT_CONFIG["provider"])  # 新增参数
-        model = data.get('model', DEFAULT_CONFIG["model"])  # 新增参数
         
-        if not topic:
-            return jsonify({'error': '请提供辩论主题'}), 400
-            
+        # 验证输入
+        validated = validate_input(
+            data,
+            required_fields={
+                'topic': (str, 500)
+            },
+            optional_fields={
+                'rounds': (int, None, DEFAULT_CONFIG["rounds"]),
+                'stream': (bool, None, False),
+                'provider': (str, 50, DEFAULT_CONFIG["provider"]),
+                'model': (str, 100, DEFAULT_CONFIG["model"])
+            }
+        )
+        
+        topic = validated['topic']
+        rounds = validated['rounds']
+        stream = validated['stream']
+        provider = validated['provider']
+        model = validated['model']
+        
+        # 验证轮次范围
+        if not 1 <= rounds <= 10:
+            return jsonify({'error': '辩论轮次必须在1-10之间'}), 400
+        
         # 如果请求流式输出，但通过普通API调用，则返回错误
         if stream:
             return jsonify({'error': '流式输出请使用 /api/debate/stream 端点'}), 400
@@ -273,41 +365,80 @@ def debate():
 @app.route('/api/debate/init', methods=['POST'])
 def init_debate():
     """初始化辩论并创建会话记录"""
-    data = request.get_json()
-    topic = data.get('topic')
-    rounds = data.get('rounds', 3)
-    provider = data.get('provider', 'deepseek')
-    model = data.get('model', 'deepseek-chat')
-    
-    # 创建新的会话记录
-    session = Session(
-        session_type='debate',
-        topic=topic,
-        settings={
-            'rounds': rounds,
-            'provider': provider,
-            'model': model
-        }
-    )
-    db.session.add(session)
-    db.session.commit()
-    
-    return jsonify({
-        'session_id': session.id,
-        'topic': topic,
-        'rounds': rounds
-    })
+    try:
+        data = request.get_json()
+        
+        # 验证输入
+        validated = validate_input(
+            data,
+            required_fields={
+                'topic': (str, 500)
+            },
+            optional_fields={
+                'rounds': (int, None, 3),
+                'provider': (str, 50, 'deepseek'),
+                'model': (str, 100, 'deepseek-chat')
+            }
+        )
+        
+        topic = validated['topic']
+        rounds = validated['rounds']
+        provider = validated['provider']
+        model = validated['model']
+        
+        # 验证轮次范围
+        if not 1 <= rounds <= 10:
+            return jsonify({'error': '辩论轮次必须在1-10之间'}), 400
+        
+        # 创建新的会话记录
+        session = Session(
+            session_type='debate',
+            topic=topic,
+            settings={
+                'rounds': rounds,
+                'provider': provider,
+                'model': model
+            }
+        )
+        db.session.add(session)
+        db.session.commit()
+        
+        return jsonify({
+            'session_id': session.id,
+            'topic': topic,
+            'rounds': rounds
+        })
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        print(f"初始化辩论错误: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': '初始化辩论失败'}), 500
 
 @app.route('/api/debate/stream')
 def stream_debate():
     """流式辩论接口"""
-    topic = request.args.get('topic')
-    rounds = int(request.args.get('rounds', DEFAULT_CONFIG["rounds"]))
-    provider = request.args.get('provider', DEFAULT_CONFIG["provider"])  # 新增
-    model = request.args.get('model', DEFAULT_CONFIG["model"])  # 新增
-    
-    if not topic:
-        return jsonify({'error': '请提供辩论主题'}), 400
+    try:
+        topic = request.args.get('topic', '').strip()
+        
+        if not topic:
+            return jsonify({'error': '请提供辩论主题'}), 400
+        
+        if len(topic) > 500:
+            return jsonify({'error': '主题长度不能超过500个字符'}), 400
+        
+        try:
+            rounds = int(request.args.get('rounds', DEFAULT_CONFIG["rounds"]))
+            if not 1 <= rounds <= 10:
+                return jsonify({'error': '辩论轮次必须在1-10之间'}), 400
+        except ValueError:
+            return jsonify({'error': '轮次必须是有效的整数'}), 400
+        
+        provider = request.args.get('provider', DEFAULT_CONFIG["provider"])[:50]
+        model = request.args.get('model', DEFAULT_CONFIG["model"])[:100]
+        
+    except Exception as e:
+        return jsonify({'error': f'参数验证失败: {str(e)}'}), 400
     
     def generate():
         try:
@@ -418,19 +549,35 @@ def single_debate():
     """单次辩论接口，用于逐步生成辩论内容"""
     try:
         data = request.json
-        topic = data.get('topic')  # 当前的辩论主题或上一轮的回应
-        side = data.get('side')    # 正方或反方
-        round_num = data.get('round', 1)  # 当前轮次
-        provider = data.get('provider', DEFAULT_CONFIG["provider"])
-        model = data.get('model', DEFAULT_CONFIG["model"])
-        session_id = data.get('session_id')  # 从请求中获取会话ID
         
-        if not topic or not side:
-            return jsonify({'error': '请提供辩论主题和辩论方'}), 400
-            
+        # 验证输入
+        validated = validate_input(
+            data,
+            required_fields={
+                'topic': (str, 2000),
+                'side': (str, 10)
+            },
+            optional_fields={
+                'round': (int, None, 1),
+                'provider': (str, 50, DEFAULT_CONFIG["provider"]),
+                'model': (str, 100, DEFAULT_CONFIG["model"]),
+                'session_id': (int, None, None)
+            }
+        )
+        
+        topic = validated['topic']
+        side = validated['side']
+        round_num = validated['round']
+        provider = validated['provider']
+        model = validated['model']
+        session_id = validated['session_id']
+        
         # 验证参数
         if side not in ['正方', '反方']:
             return jsonify({'error': '辩论方必须为"正方"或"反方"'}), 400
+        
+        if not 1 <= round_num <= 10:
+            return jsonify({'error': '轮次必须在1-10之间'}), 400
             
         api_key = get_api_key(provider)
         
@@ -524,6 +671,7 @@ def export_session(session_id):
         return jsonify({"error": "Unsupported format"}), 400
 
 @app.route('/api/history')
+@cache.cached(timeout=60, query_string=True)  # 缓存1分钟
 def get_history():
     try:
         print("正在获取历史记录...")
@@ -531,14 +679,22 @@ def get_history():
         session_type = request.args.get('type', 'all')
         print(f"请求的会话类型: {session_type}")
         
+        # 验证session_type
+        valid_types = ['all', 'debate', 'chat', 'qa']
+        if session_type not in valid_types:
+            return jsonify({'error': f'无效的会话类型，必须是 {", ".join(valid_types)} 之一'}), 400
+        
         # 构建查询
         query = Session.query
         if session_type and session_type != 'all':
             query = query.filter_by(session_type=session_type)
             
-        # 执行查询（避免N+1：一次性统计消息数）
-        sessions = query.order_by(Session.created_at.desc()).all()
+        # 执行查询（避免N+1：一次性统计消息数）- 优化：使用子查询
+        sessions = query.order_by(Session.created_at.desc()).limit(100).all()
         print(f"查询到 {len(sessions)} 个会话")
+
+        if not sessions:
+            return jsonify({'history': []})
 
         session_ids = [s.id for s in sessions]
         counts_map = {}
@@ -567,13 +723,28 @@ def get_history():
         return jsonify({'error': f'获取历史记录时发生错误：{str(e)}'}), 500
 
 @app.route('/api/history/<session_id>')
+@cache.cached(timeout=120, query_string=True)  # 缓存2分钟
 def get_session_detail(session_id):
     """获取特定会话的详细记录"""
     try:
+        # 验证session_id
+        try:
+            session_id = int(session_id)
+        except ValueError:
+            return jsonify({'error': '无效的会话ID'}), 400
+        
         print(f"正在获取会话 {session_id} 的详情...")
+        
+        # 使用join优化查询
         messages = Message.query.filter_by(
             session_id=session_id
         ).order_by(Message.created_at).all()
+        
+        if not messages:
+            # 检查会话是否存在
+            session = Session.query.get(session_id)
+            if not session:
+                return jsonify({'error': '会话不存在'}), 404
         
         print(f"查询到 {len(messages)} 条消息")
         return jsonify({
@@ -588,6 +759,12 @@ def get_session_detail(session_id):
 @app.route('/api/history/<session_id>', methods=['DELETE'])
 def delete_session(session_id):
     try:
+        # 验证session_id
+        try:
+            session_id = int(session_id)
+        except ValueError:
+            return jsonify({'success': False, 'message': '无效的会话ID'}), 400
+        
         print(f"正在删除会话 {session_id}...")
         # 先删除该会话的所有消息
         Message.query.filter_by(session_id=session_id).delete()
@@ -596,6 +773,10 @@ def delete_session(session_id):
         if session:
             db.session.delete(session)
             db.session.commit()
+            
+            # 清除缓存
+            cache.clear()
+            
             print(f"会话 {session_id} 删除成功")
             return jsonify({'success': True, 'message': '删除成功'})
         else:
@@ -609,8 +790,18 @@ def delete_session(session_id):
 @app.route('/api/history/<session_id>/export')
 def export_history_session(session_id):
     try:
+        # 验证session_id
+        try:
+            session_id = int(session_id)
+        except ValueError:
+            return jsonify({'error': '无效的会话ID'}), 400
+        
         print(f"正在导出会话 {session_id}...")
-        format_type = request.args.get('format', 'json')
+        format_type = request.args.get('format', 'json').lower()
+        
+        # 验证format参数
+        if format_type not in ['json', 'markdown']:
+            return jsonify({'error': '不支持的导出格式，仅支持 json 或 markdown'}), 400
         
         # 获取会话和消息
         session = Session.query.get(session_id)
@@ -624,6 +815,7 @@ def export_history_session(session_id):
             data = {
                 'session_id': session.id,
                 'topic': session.topic,
+                'session_type': session.session_type,
                 'start_time': session.created_at.isoformat(),
                 'messages': [{
                     'role': msg.role,
@@ -637,6 +829,7 @@ def export_history_session(session_id):
             # 构建 Markdown 格式的内容
             markdown_content = f"# {session.topic}\n\n"
             markdown_content += f"会话ID: {session.id}\n"
+            markdown_content += f"会话类型: {session.session_type}\n"
             markdown_content += f"开始时间: {session.created_at.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
             
             for msg in messages:
@@ -652,9 +845,6 @@ def export_history_session(session_id):
                     'Content-Disposition': f'attachment; filename=session_{session_id}.md'
                 }
             )
-            
-        else:
-            return jsonify({'error': '不支持的导出格式'}), 400
             
     except Exception as e:
         print(f"导出会话失败: {str(e)}")
