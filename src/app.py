@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, Response, stream_with_context, send_from_directory
+from flask import Flask, render_template, request, jsonify, Response, stream_with_context, send_from_directory, g
 from flask_caching import Cache
 from dotenv import load_dotenv
 import os
@@ -13,6 +13,7 @@ from models import db, Session, Message
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect, func
 from functools import wraps
+from performance import before_request, after_request, performance_monitor
 
 # 设置默认编码为UTF-8
 if sys.stdout.encoding != 'utf-8':
@@ -73,6 +74,10 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 
 # 初始化数据库
 db.init_app(app)
+
+# 注册性能监控钩子
+app.before_request(before_request)
+app.after_request(after_request)
 
 # 创建数据库表
 with app.app_context():
@@ -849,6 +854,25 @@ def export_history_session(session_id):
     except Exception as e:
         print(f"导出会话失败: {str(e)}")
         return jsonify({'error': f'导出失败: {str(e)}'}), 500
+
+@app.route('/api/stats')
+def get_stats():
+    """获取性能统计信息"""
+    try:
+        stats = performance_monitor.get_stats()
+        return jsonify({
+            'performance': stats,
+            'cache_info': {
+                'type': app.config.get('CACHE_TYPE', 'SimpleCache'),
+                'timeout': app.config.get('CACHE_DEFAULT_TIMEOUT', 300)
+            },
+            'database': {
+                'pool_size': app.config['SQLALCHEMY_ENGINE_OPTIONS']['pool_size'],
+                'pool_recycle': app.config['SQLALCHEMY_ENGINE_OPTIONS']['pool_recycle']
+            }
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True) 
