@@ -442,6 +442,8 @@ def init_debate():
             'rounds': rounds
         })
     except ValueError as e:
+        # ValueError from validation is safe to expose as it contains user-facing messages
+        logger.info(f"Validation error in init_debate: {str(e)}")
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         logger.error(f"初始化辩论错误: {str(e)}", exc_info=True)
